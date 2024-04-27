@@ -1,0 +1,35 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: 80a9e5f
+_src_path: git+https://github.com/twsl/python-project-template
+author_email: 45483159+twsl@users.noreply.github.com
+author_username: twsl
+copyright_holder: twsl
+copyright_holder_email: 45483159+twsl@users.noreply.github.com
+copyright_license: MIT
+copyright_year: 2024
+custom_install: true
+docs_library: mkdocs
+github_runner:
+- ubuntu-latest
+github_runner_python_version:
+- '3.10'
+- '3.11'
+- '3.12'
+include_copilot: true
+include_databricks: true
+include_docs: true
+include_notebooks: true
+include_sample_code: false
+line_ending: lf
+primary_branch: main
+project_description: An improved Lightning mlflow logger
+project_name: lit-mlflow
+python_package_command_line_name: lit-mlflow
+python_package_distribution_name: lit-mlflow
+python_package_import_name: lit_mlflow
+python_version: '3.11'
+repository_name: lit-mlflow
+repository_namespace: twsl
+repository_provider: github.com
+self_signed: false
+use_precommit: true
