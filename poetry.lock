@@ -2316,13 +2316,13 @@ wcmatch = ">=7"
 
 [[package]]
 name = "mkdocs-git-authors-plugin"
-version = "0.8.0"
+version = "0.9.0"
 description = "Mkdocs plugin to display git authors of a page"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "mkdocs-git-authors-plugin-0.8.0.tar.gz", hash = "sha256:10dfc57fb10d5c3aceb0e5cdea199ac3a7588979f26484eba46d935dc1044c26"},
-    {file = "mkdocs_git_authors_plugin-0.8.0-py3-none-any.whl", hash = "sha256:0614f4f87d31eabd0a0d607c9e0532608fc593997ebee282ec564ee6dc1c041e"},
+    {file = "mkdocs_git_authors_plugin-0.9.0-py3-none-any.whl", hash = "sha256:380730a05eeb947a7e84be05fdb1c5ae2a7bc70fd9f6eda941f187c87ae37052"},
+    {file = "mkdocs_git_authors_plugin-0.9.0.tar.gz", hash = "sha256:6161f63b87064481a48d9ad01c23e43c3e758930c3a9cc167fe482909ceb9eac"},
 ]
 
 [package.dependencies]
@@ -5160,4 +5160,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "372fb4ad6453d73bd066c3d6fa03a9c184a43059e8cd7012cee85deea59ba1f5"
+content-hash = "620ed87fe8b0cea899d5be7d4b4e7188000723aec62e367a2a4a6b7b457568b1"
