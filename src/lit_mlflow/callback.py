@@ -30,6 +30,8 @@ class MlFlowAutoCallback(Callback):
         self.logger: MLFlowLogger | DbxMLFlowLogger | None = None
         self.autologging_disabled = False
 
+        mlflow.enable_system_metrics_logging()
+
     @property
     def client(self) -> MlflowClient | None:
         if self.logger:
@@ -205,8 +207,6 @@ class MlFlowAutoCallback(Callback):
 
         if not patched:
             rank_zero_info("Device stats monitor has not been added to callbacks!")
-
-        mlflow.enable_system_metrics_logging()
 
     @rank_zero_only
     def setup(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", stage: str) -> None:
