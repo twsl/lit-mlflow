@@ -24,11 +24,10 @@ from lit_mlflow.utils.dbx import get_databricks_tags
 
 
 class MlFlowAutoCallback(Callback):
-    def __init__(self, verbose: bool = True, enable_system_metrics: bool = True) -> None:
+    def __init__(self, verbose: bool = True) -> None:
         self.supported_loggers = (MLFlowLogger, DbxMLFlowLogger)
         self.verbose = verbose
         self.logger: MLFlowLogger | DbxMLFlowLogger | None = None
-        self.enable_system_metrics = enable_system_metrics
         self.autologging_disabled = False
 
     @property
@@ -160,20 +159,13 @@ class MlFlowAutoCallback(Callback):
                 rank_zero_info(f"metrics: {run.data.metrics}")
                 rank_zero_info(f"tags: {tags}")
 
-    def _log_cluster(self) -> None:
+    def _log_cluster_tags(self) -> None:
         tags = get_databricks_tags()
         if self.logger and self.logger.run_id and self.client:
             for tag, value in tags.items():
                 self.client.set_tag(self.logger.run_id, key=tag, value=value)
 
-    def _resolve_device_stats_monitor_callback(self, trainer: "pl.Trainer") -> DeviceStatsMonitor | None:
-        if hasattr(trainer, "callbacks"):
-            for callback in cast(list[Callback], trainer.callbacks):  # pyright: ignore[reportAttributeAccessIssue]
-                if isinstance(callback, DeviceStatsMonitor):
-                    return callback
-        return None
-
-    def _patch_device_stats_monitor(self, device_stats_monitor_callback: DeviceStatsMonitor) -> None:
+    def _patch_device_stats_monitor(self, trainer: "pl.Trainer") -> None:
         def _patched_prefix_metric_keys(
             metrics_dict: dict[str, float], prefix: str, separator: str
         ) -> dict[str, float]:
@@ -201,10 +193,20 @@ class MlFlowAutoCallback(Callback):
                 prefixed_device_stats = _patched_prefix_metric_keys(device_stats, f"system/{key}", separator)
                 logger.log_metrics(prefixed_device_stats, step=trainer.fit_loop.epoch_loop._batches_that_stepped)
 
-        # mlflow.enable_system_metrics_logging()
-        device_stats_monitor_callback._get_and_log_device_stats = _patched_get_and_log_device_stats.__get__(
-            device_stats_monitor_callback, DeviceStatsMonitor
-        )
+        patched = False
+        if hasattr(trainer, "callbacks"):
+            for callback in cast(list[Callback], trainer.callbacks):  # pyright: ignore[reportAttributeAccessIssue]
+                if isinstance(callback, DeviceStatsMonitor):
+                    callback._get_and_log_device_stats = _patched_get_and_log_device_stats.__get__(
+                        callback, DeviceStatsMonitor
+                    )
+                    patched = True
+                    rank_zero_info("Device stats monitoring enabled!")
+
+        if not patched:
+            rank_zero_info("Device stats monitor has not been added to callbacks!")
+
+        mlflow.enable_system_metrics_logging()
 
     @rank_zero_only
     def setup(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", stage: str) -> None:
@@ -216,11 +218,9 @@ class MlFlowAutoCallback(Callback):
             self.autologging_disabled = True
         if trainer.is_global_zero:
             self.logger = self._get_logger(trainer.loggers)
-            self._log_cluster()
+            self._log_cluster_tags()
 
-        callback = self._resolve_device_stats_monitor_callback(trainer)
-        if callback:
-            self._patch_device_stats_monitor(callback)
+        self._patch_device_stats_monitor(trainer)
 
     @rank_zero_only
     def teardown(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", stage: str) -> None:
