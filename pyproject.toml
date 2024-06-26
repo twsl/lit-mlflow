@@ -21,16 +21,17 @@ keywords = []
 
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.10"
 mlflow = "^2.12.1"
 lightning = "^2.2.2"
 
 [tool.poetry.group.dbx.dependencies]
 databricks-cli = "^0.18.0"
 pyspark = "^3.5.1"
+databricks-connect = "^14.3.2"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.4.1"
+ruff = "^0.4.2"
 safety = "^3.0.1"
 bandit = "^1.7.8"
 pre-commit = "^3.6.2"
@@ -178,6 +179,10 @@ extend-immutable-calls = [
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 120
+max-line-length = 120
+
 [tool.ruff.lint.per-file-ignores]
 "test*/**/*.py" = [
     "D100",
@@ -209,10 +214,6 @@ quote-style = "double"
 
 [tool.bandit.assert_used]
 skips = ['*_test.py', '*/test_*.py']
-
-[tool.ruff.lint.pycodestyle]
-max-doc-length = 120
-max-line-length = 120
 
 [tool.pyright]
 pythonVersion = "3.11"

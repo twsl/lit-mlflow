@@ -12,14 +12,13 @@
     },
     // Features to add to the dev container. More info: https://containers.dev/features.
     "features": {
+        "ghcr.io/devcontainers/features/azure-cli:1": {},
         "ghcr.io/devcontainers/features/git:1": {},
         "ghcr.io/devcontainers-contrib/features/actionlint:1": {},
         "ghcr.io/devcontainers-contrib/features/pre-commit:2": {},
         "ghcr.io/dhoeric/features/act:1": {},
-        "ghcr.io/devcontainers/features/docker-in-docker:2": {
-            "version": "latest",
-            "moby": true
-        }
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+        "ghcr.io/stuartleeks/dev-container-features/azure-cli-persistence:0": {}
     },
     // Use 'forwardPorts' to make a list of ports inside the container available locally.
     // "forwardPorts": [],
@@ -115,7 +114,8 @@
                 "ExecutableBookProject.myst-highlight",
                 "databricks.databricks",
                 "paiqo.databricks-vscode",
-                "redhat.vscode-yaml"
+                "redhat.vscode-yaml",
+                "RandomFractalsInc.vscode-data-preview"
             ]
         }
     },

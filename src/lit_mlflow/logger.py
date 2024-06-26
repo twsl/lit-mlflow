@@ -17,7 +17,7 @@ class DbxMLFlowLogger(MLFlowLogger):
         self,
         experiment_name: str = "lightning_logs",
         run_name: str | None = None,
-        tracking_uri: str | None = os.getenv("MLFLOW_TRACKING_URI"),
+        tracking_uri: str | None = mlflow.get_tracking_uri(),  # os.getenv("MLFLOW_TRACKING_URI"),
         tags: dict[str, Any] | None = None,
         save_dir: str | None = "./mlruns",
         log_model: Literal[True, False, "all"] = False,
@@ -34,9 +34,13 @@ class DbxMLFlowLogger(MLFlowLogger):
             self._fix_logging()
             if patch_dbx_credentials():
                 client = self.experiment
-                if client and client.run_id:
-                    run_url = get_databricks_run_url(tracking_uri or "databricks", client.run_id)
-                rank_zero_info(f"MLflow run URL: {run_url}")
+                active_run = mlflow.active_run()
+                if client and active_run:
+                    run_id = active_run.info.run_id or ""
+                    run_url = get_databricks_run_url(tracking_uri or "databricks", run_id)
+                    rank_zero_info(f"MLflow run URL: {run_url}")
+                else:
+                    rank_zero_warn("Could not retrieve the MLflow run.")
             else:
                 rank_zero_warn("Could not patch Databricks credentials.")
 

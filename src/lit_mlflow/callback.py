@@ -5,7 +5,7 @@ from typing import Any, cast
 
 from lightning.fabric.utilities.rank_zero import rank_zero_info, rank_zero_only, rank_zero_warn  # type: ignore
 import lightning.pytorch as pl
-from lightning.pytorch.callbacks import Callback, EarlyStopping
+from lightning.pytorch.callbacks import Callback, DeviceStatsMonitor, EarlyStopping
 from lightning.pytorch.core.optimizer import LightningOptimizer
 from lightning.pytorch.loggers import Logger, MLFlowLogger
 from lightning.pytorch.trainer.states import TrainerFn
@@ -24,10 +24,12 @@ from lit_mlflow.utils.dbx import get_databricks_tags
 
 
 class MlFlowAutoCallback(Callback):
-    def __init__(self, verbose: bool = True) -> None:
+    def __init__(self, verbose: bool = True, enable_system_metrics: bool = True) -> None:
         self.supported_loggers = (MLFlowLogger, DbxMLFlowLogger)
         self.verbose = verbose
         self.logger: MLFlowLogger | DbxMLFlowLogger | None = None
+        self.enable_system_metrics = enable_system_metrics
+        self.autologging_disabled = False
 
     @property
     def client(self) -> MlflowClient | None:
@@ -164,14 +166,61 @@ class MlFlowAutoCallback(Callback):
             for tag, value in tags.items():
                 self.client.set_tag(self.logger.run_id, key=tag, value=value)
 
+    def _resolve_device_stats_monitor_callback(self, trainer: "pl.Trainer") -> DeviceStatsMonitor | None:
+        if hasattr(trainer, "callbacks"):
+            for callback in cast(list[Callback], trainer.callbacks):  # pyright: ignore[reportAttributeAccessIssue]
+                if isinstance(callback, DeviceStatsMonitor):
+                    return callback
+        return None
+
+    def _patch_device_stats_monitor(self, device_stats_monitor_callback: DeviceStatsMonitor) -> None:
+        def _patched_prefix_metric_keys(
+            metrics_dict: dict[str, float], prefix: str, separator: str
+        ) -> dict[str, float]:
+            return {prefix + separator + k: v for k, v in metrics_dict.items()}
+
+        def _patched_get_and_log_device_stats(self, trainer: "pl.Trainer", key: str) -> None:
+            if not trainer._logger_connector.should_update_logs:
+                return
+
+            device = trainer.strategy.root_device
+            if self._cpu_stats is False and device.type == "cpu":
+                # cpu stats are disabled
+                return
+
+            device_stats = trainer.accelerator.get_device_stats(device)
+
+            if self._cpu_stats and device.type != "cpu":
+                # Don't query CPU stats twice if CPU is accelerator
+                from lightning.pytorch.accelerators.cpu import get_cpu_stats
+
+                device_stats.update(get_cpu_stats())
+
+            for logger in trainer.loggers:
+                separator = logger.group_separator
+                prefixed_device_stats = _patched_prefix_metric_keys(device_stats, f"system/{key}", separator)
+                logger.log_metrics(prefixed_device_stats, step=trainer.fit_loop.epoch_loop._batches_that_stepped)
+
+        # mlflow.enable_system_metrics_logging()
+        device_stats_monitor_callback._get_and_log_device_stats = _patched_get_and_log_device_stats.__get__(
+            device_stats_monitor_callback, DeviceStatsMonitor
+        )
+
     @rank_zero_only
     def setup(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", stage: str) -> None:
         """Called when fit, validate, test, predict, or tune begins."""
-        rank_zero_info("Starting MLFlow auto logging!")
-        mlflow.autolog(disable=True)
+        if not self.autologging_disabled:
+            rank_zero_info("Starting MLFlow Databricks logging!")
+            rank_zero_info("Auto logging disabled!")
+            mlflow.autolog(disable=True)
+            self.autologging_disabled = True
         if trainer.is_global_zero:
             self.logger = self._get_logger(trainer.loggers)
             self._log_cluster()
+
+        callback = self._resolve_device_stats_monitor_callback(trainer)
+        if callback:
+            self._patch_device_stats_monitor(callback)
 
     @rank_zero_only
     def teardown(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", stage: str) -> None:
