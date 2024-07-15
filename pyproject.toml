@@ -28,7 +28,7 @@ lightning = "^2.3.0"
 [tool.poetry.group.dbx.dependencies]
 databricks-cli = "^0.18.0"
 pyspark = "^3.5.1"
-databricks-connect = "^14.3.2"
+databricks-connect = "^15.3.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.4.10"
