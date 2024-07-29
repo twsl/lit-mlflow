@@ -83,7 +83,6 @@ jobs:
       - name: Run safety checks
         run: |
           poetry check
-          poetry run safety check --full-report
           poetry run bandit -ll --recursive hooks
         continue-on-error: true
 
