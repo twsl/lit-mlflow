@@ -3,7 +3,11 @@ import os
 from typing import Any, Literal
 
 from lightning.fabric.loggers.logger import Logger, rank_zero_experiment
-from lightning.fabric.utilities.rank_zero import rank_zero_info, rank_zero_only, rank_zero_warn  # type: ignore
+from lightning.fabric.utilities.rank_zero import (
+    rank_zero_info,  # type: ignore  # noqa: PGH003
+    rank_zero_only,
+    rank_zero_warn,  # type: ignore  # noqa: PGH003
+)
 from lightning.pytorch.loggers import MLFlowLogger
 import mlflow
 from mlflow.tracking import MlflowClient
@@ -34,15 +38,21 @@ class DbxMLFlowLogger(MLFlowLogger):
             self._fix_logging()
             if patch_dbx_credentials():
                 client = self.experiment
-                active_run = mlflow.active_run()
-                if client and active_run:
-                    run_id = active_run.info.run_id or ""
-                    run_url = get_databricks_run_url(tracking_uri or "databricks", run_id)
-                    rank_zero_info(f"MLflow run URL: {run_url}")
+                if client:
+                    active_run = mlflow.active_run()
+                    if active_run:
+                        run_url = self._get_url()
+                        rank_zero_info(f"MLflow run URL: {run_url}")
+                    else:
+                        rank_zero_warn("Could not retrieve the MLflow run yet.")
                 else:
-                    rank_zero_warn("Could not retrieve the MLflow run.")
+                    rank_zero_warn("Could not retrieve the MLflow client.")
             else:
                 rank_zero_warn("Could not patch Databricks credentials.")
+
+    def _get_url(self) -> str | None:
+        run_url = get_databricks_run_url(self._tracking_uri or "databricks", self.run_id)
+        return run_url
 
     @rank_zero_only
     def _fix_logging(self) -> None:
@@ -55,3 +65,17 @@ class DbxMLFlowLogger(MLFlowLogger):
         if is_in_databricks_notebook():
             self._experiment_id = get_experiment_id(None)
         return super().experiment
+
+    @property
+    def run_id(self) -> str | None:
+        _ = self.experiment
+        active_run = mlflow.active_run()
+        if active_run:
+            self._run_id = active_run.info.run_id or ""
+        return self._run_id
+
+    @rank_zero_only
+    def finalize(self, status: str = "success") -> None:
+        final = super().finalize(status)
+        rank_zero_info(f"MLflow run URL: {self._get_url()}")
+        return final

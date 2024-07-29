@@ -8,6 +8,7 @@ import lightning.pytorch as pl
 from lightning.pytorch.callbacks import Callback, DeviceStatsMonitor, EarlyStopping
 from lightning.pytorch.core.optimizer import LightningOptimizer
 from lightning.pytorch.loggers import Logger, MLFlowLogger
+from lightning.pytorch.loggers.mlflow import _get_resolve_tags
 from lightning.pytorch.trainer.states import TrainerFn
 from lightning.pytorch.utilities.model_summary.model_summary import ModelSummary
 from lightning.pytorch.utilities.types import STEP_OUTPUT
@@ -24,13 +25,12 @@ from lit_mlflow.utils.dbx import get_databricks_tags
 
 
 class MlFlowAutoCallback(Callback):
-    def __init__(self, verbose: bool = True) -> None:
+    def __init__(self, verbose: bool = True, patch_device_monitor: bool = True) -> None:
         self.supported_loggers = (MLFlowLogger, DbxMLFlowLogger)
         self.verbose = verbose
         self.logger: MLFlowLogger | DbxMLFlowLogger | None = None
         self.autologging_disabled = False
-
-        mlflow.enable_system_metrics_logging()
+        self.patch_device_monitor = patch_device_monitor
 
     @property
     def client(self) -> MlflowClient | None:
@@ -162,7 +162,9 @@ class MlFlowAutoCallback(Callback):
                 rank_zero_info(f"tags: {tags}")
 
     def _log_cluster_tags(self) -> None:
-        tags = get_databricks_tags()
+        internal_tags: dict = _get_resolve_tags()  # type: ignore  # noqa: PGH003
+        tags = get_databricks_tags() | internal_tags
+
         if self.logger and self.logger.run_id and self.client:
             for tag, value in tags.items():
                 self.client.set_tag(self.logger.run_id, key=tag, value=value)
@@ -220,7 +222,8 @@ class MlFlowAutoCallback(Callback):
             self.logger = self._get_logger(trainer.loggers)
             self._log_cluster_tags()
 
-        self._patch_device_stats_monitor(trainer)
+        if self.patch_device_monitor:
+            self._patch_device_stats_monitor(trainer)
 
     @rank_zero_only
     def teardown(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", stage: str) -> None:
