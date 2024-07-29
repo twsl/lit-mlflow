@@ -162,8 +162,7 @@ class MlFlowAutoCallback(Callback):
                 rank_zero_info(f"tags: {tags}")
 
     def _log_cluster_tags(self) -> None:
-        internal_tags: dict = _get_resolve_tags()  # type: ignore  # noqa: PGH003
-        tags = get_databricks_tags() | internal_tags
+        tags = get_databricks_tags()
 
         if self.logger and self.logger.run_id and self.client:
             for tag, value in tags.items():

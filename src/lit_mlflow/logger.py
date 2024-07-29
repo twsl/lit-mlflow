@@ -39,19 +39,14 @@ class DbxMLFlowLogger(MLFlowLogger):
             if patch_dbx_credentials():
                 client = self.experiment
                 if client:
-                    active_run = mlflow.active_run()
-                    if active_run:
-                        run_url = self._get_url()
-                        rank_zero_info(f"MLflow run URL: {run_url}")
-                    else:
-                        rank_zero_warn("Could not retrieve the MLflow run yet.")
+                    rank_zero_info("MLflow client created.")
                 else:
                     rank_zero_warn("Could not retrieve the MLflow client.")
             else:
                 rank_zero_warn("Could not patch Databricks credentials.")
 
     def _get_url(self) -> str | None:
-        run_url = get_databricks_run_url(self._tracking_uri or "databricks", self.run_id)
+        run_url = get_databricks_run_url(self._tracking_uri or "databricks", self.run_id or "")
         return run_url
 
     @rank_zero_only
