@@ -50,7 +50,7 @@ jobs:
           path: .venv
           key: venv-Linux-3.11-${{ hashFiles('poetry.lock') }}
 
-      
+
 
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'

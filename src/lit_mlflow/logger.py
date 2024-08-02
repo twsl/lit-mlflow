@@ -69,8 +69,8 @@ class DbxMLFlowLogger(MLFlowLogger):
             self._run_id = active_run.info.run_id or ""
         return self._run_id
 
-    @rank_zero_only
-    def finalize(self, status: str = "success") -> None:
-        final = super().finalize(status)
-        rank_zero_info(f"MLflow run URL: {self._get_url()}")
-        return final
+    # @rank_zero_only
+    # def finalize(self, status: str = "success") -> None:
+    #     final = super().finalize(status)
+    #     rank_zero_info(f"MLflow run URL: {self._get_url()}")
+    #     return final

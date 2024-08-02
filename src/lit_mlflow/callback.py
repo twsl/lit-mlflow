@@ -14,6 +14,9 @@ from lightning.pytorch.utilities.model_summary.model_summary import ModelSummary
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 import mlflow
 from mlflow import MlflowClient, MlflowException
+from mlflow.data.code_dataset_source import CodeDatasetSource
+from mlflow.data.meta_dataset import MetaDataset
+from mlflow.entities.dataset_input import DatasetInput
 from mlflow.entities.run import Run
 from mlflow.entities.run_status import RunStatus
 from mlflow.models import Model
@@ -56,12 +59,16 @@ class MlFlowAutoCallback(Callback):
     def _prevent_entry(self, trainer: "pl.Trainer") -> bool:
         return self.logger is None or not trainer.is_global_zero
 
+    def _get_optimizer(self, optimizer: LightningOptimizer | Optimizer) -> Optimizer:
+        return optimizer._optimizer if isinstance(optimizer, LightningOptimizer) else optimizer
+
     def _get_optimizer_name(self, optimizer: LightningOptimizer | Optimizer) -> str:
-        return (
-            str(optimizer._optimizer.__class__.__name__)
-            if isinstance(optimizer, LightningOptimizer)
-            else str(optimizer.__class__.__name__)
-        )
+        opt = self._get_optimizer(optimizer)
+        return opt.__class__.__name__
+
+    def _get_optimizer_defaults(self, optimizer: LightningOptimizer | Optimizer) -> dict[str, Any]:
+        opt = self._get_optimizer(optimizer)
+        return opt.defaults if hasattr(opt, "defaults") else {}
 
     def _log_early_stop_params(self, early_stop_callback: EarlyStopping) -> None:
         """Logs early stopping configuration parameters to MLflow."""
@@ -168,6 +175,15 @@ class MlFlowAutoCallback(Callback):
             for tag, value in tags.items():
                 self.client.set_tag(self.logger.run_id, key=tag, value=value)
 
+    def _log_dataset_info(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+        if hasattr(trainer, "datamodule") and trainer.datamodule:  # type: ignore  # noqa: PGH003
+            dataset = trainer.datamodule.train_dataloader().dataset
+            if self.logger and self.logger.run_id and self.client:
+                source = CodeDatasetSource(tags={"class": dataset.__class__.__name__})
+                meta_ds = MetaDataset(source=source, name=dataset.__class__.__name__)
+                ds_input = DatasetInput(dataset=meta_ds, tags=[])  # type: ignore  # noqa: PGH003
+                self.client.log_inputs(run_id=self.logger.run_id, datasets=[ds_input])
+
     def _patch_device_stats_monitor(self, trainer: "pl.Trainer") -> None:
         def _patched_prefix_metric_keys(
             metrics_dict: dict[str, float], prefix: str, separator: str
@@ -204,25 +220,30 @@ class MlFlowAutoCallback(Callback):
                         callback, DeviceStatsMonitor
                     )
                     patched = True
-                    rank_zero_info("Device stats monitoring enabled!")
+                    rank_zero_info("Lightning device stats monitoring enabled!")
 
         if not patched:
-            rank_zero_info("Device stats monitor has not been added to callbacks!")
+            rank_zero_info("Lightning device stats monitor has not been added to callbacks!")
 
     @rank_zero_only
     def setup(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", stage: str) -> None:
         """Called when fit, validate, test, predict, or tune begins."""
         if not self.autologging_disabled:
             rank_zero_info("Starting MLFlow Databricks logging!")
-            rank_zero_info("Auto logging disabled!")
+            rank_zero_info("Default auto logging disabled!")
             mlflow.autolog(disable=True)
             self.autologging_disabled = True
+
         if trainer.is_global_zero:
             self.logger = self._get_logger(trainer.loggers)
             self._log_cluster_tags()
+            self._log_dataset_info(trainer, pl_module)
 
         if self.patch_device_monitor:
             self._patch_device_stats_monitor(trainer)
+
+        if not self._prevent_entry(trainer) and self.logger and self.logger.run_id and self.client:
+            self.client.update_run(run_id=self.logger.run_id, status=RunStatus.to_string(RunStatus.RUNNING))
 
     @rank_zero_only
     def teardown(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", stage: str) -> None:
@@ -230,10 +251,11 @@ class MlFlowAutoCallback(Callback):
         if self._prevent_entry(trainer):
             return None
 
-        if stage == TrainerFn.TESTING:
-            if self.logger and self.logger.run_id and self.client:
-                pass
-                # self.client.set_terminated(run_id=self.logger.run_id, status=RunStatus.to_string(RunStatus.FINISHED))
+        if self.logger and self.logger.run_id and self.client:
+            self.client.update_run(run_id=self.logger.run_id, status=RunStatus.to_string(RunStatus.FINISHED))
+
+            if stage == TrainerFn.FITTING:
+                self.client.set_terminated(run_id=self.logger.run_id, status=RunStatus.to_string(RunStatus.FINISHED))
 
     def on_fit_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
         """Called when fit begins."""
@@ -397,10 +419,12 @@ class MlFlowAutoCallback(Callback):
                     self.client.log_param(
                         self.logger.run_id, key=f"optimizer{i}_name", value=self._get_optimizer_name(optimizer)
                     )
-                    if hasattr(optimizer, "defaults"):
-                        self.client.log_param(
-                            self.logger.run_id, key=f"optimizer{i}_defaults", value=str(optimizer.defaults)
-                        )
+                    defaults = self._get_optimizer_defaults(optimizer)
+                    for key, value in defaults.items():
+                        self.client.log_param(self.logger.run_id, key=f"optimizer{i}_{key}", value=str(value))
+                        # self.client.log_param(
+                        #     self.logger.run_id, key=f"optimizer{i}_defaults", value=str(optimizer.defaults)
+                        # )
 
             callback = self._resolve_early_stopping_callback(trainer)
             if callback:
@@ -420,9 +444,15 @@ class MlFlowAutoCallback(Callback):
 
         self._log_model(trainer, pl_module)
 
+    @rank_zero_only
     def on_validation_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
         """Called when the validation loop begins."""
+        if self.logger and self.logger.run_id and self.client:
+            run_id = str(self.logger.run_id)
 
+            self.client.set_tag(run_id=run_id, key="Mode", value="validating")
+
+    @rank_zero_only
     def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
         """Called when the validation loop ends."""
 
