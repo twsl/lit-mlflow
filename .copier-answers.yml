@@ -1,5 +1,5 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: 80a9e5f
+_commit: 96197cc
 _src_path: git+https://github.com/twsl/python-project-template
 author_email: 45483159+twsl@users.noreply.github.com
 author_username: twsl
@@ -27,7 +27,7 @@ project_name: lit-mlflow
 python_package_command_line_name: lit-mlflow
 python_package_distribution_name: lit-mlflow
 python_package_import_name: lit_mlflow
-python_version: '3.11'
+python_version: '3.10'
 repository_name: lit-mlflow
 repository_namespace: twsl
 repository_provider: github.com

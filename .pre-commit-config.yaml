@@ -38,7 +38,7 @@ repos:
     rev: 1.7.9
     hooks:
       - id: bandit
-        args: ["-c", "pyproject.toml"]
+        args: [-c, pyproject.toml]
         additional_dependencies: ["bandit[toml]"]
 
   - repo: https://github.com/kynan/nbstripout
@@ -53,9 +53,13 @@ repos:
         args: ["--fix", "-v"]
 
   - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.373
+    rev: v1.1.374
     hooks:
       - id: pyright
+        args: ["--verbose", "--project=."]
+        entry: poetry run pyright
+        language: system
+        types: [python]
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.18.4
