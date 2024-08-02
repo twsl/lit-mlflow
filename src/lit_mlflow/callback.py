@@ -25,7 +25,7 @@ from mlflow.entities.run import Run
 from mlflow.entities.run_status import RunStatus
 from mlflow.models import Model
 from mlflow.pytorch import pickle_module as mlflow_pytorch_pickle_module
-from torch.optim import Optimizer
+from torch.optim import Optimizer  # pyright: ignore[reportPrivateImportUsage]
 
 from lit_mlflow.logger import DbxMLFlowLogger
 from lit_mlflow.utils.dbx import get_databricks_tags
@@ -51,13 +51,14 @@ class MlFlowAutoCallback(Callback):
                 rank_zero_warn("Cannot log artifacts because Trainer has no logger.")
                 return None
             else:
+                rank_zero_info(f" Supported loggers are: {', '.join(str(x.__name__) for x in self.supported_loggers)}")
                 for logger in loggers:
                     if isinstance(logger, self.supported_loggers):
                         return logger
-                rank_zero_warn(
-                    f"{self.__class__.__name__} does not support logging with {logger.__class__.__name__}."
-                    f" Supported loggers are: {', '.join(str(x.__name__) for x in self.supported_loggers)}"
-                )
+                    else:
+                        rank_zero_warn(
+                            f"{self.__class__.__name__} does not support logging with {logger.__class__.__name__}."
+                        )
             return None
 
     def _prevent_entry(self, trainer: "pl.Trainer") -> bool:
@@ -180,12 +181,12 @@ class MlFlowAutoCallback(Callback):
                 self.client.set_tag(self.logger.run_id, key=tag, value=value)
 
     def _log_dataset_info(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        if hasattr(trainer, "datamodule") and trainer.datamodule:  # type: ignore  # noqa: PGH003
-            dataset = trainer.datamodule.train_dataloader().dataset
+        if hasattr(trainer, "datamodule") and trainer.datamodule:  # pyright: ignore[reportAttributeAccessIssue]
+            dataset = trainer.datamodule.train_dataloader().dataset  # pyright: ignore[reportAttributeAccessIssue]
             if self.logger and self.logger.run_id and self.client:
                 source = CodeDatasetSource(tags={"class": dataset.__class__.__name__})
                 meta_ds = MetaDataset(source=source, name=dataset.__class__.__name__)
-                ds_input = DatasetInput(dataset=meta_ds, tags=[])  # type: ignore  # noqa: PGH003
+                ds_input = DatasetInput(dataset=meta_ds, tags=[])  # pyright: ignore[reportArgumentType]
                 self.client.log_inputs(run_id=self.logger.run_id, datasets=[ds_input])
 
     def _patch_device_stats_monitor(self, trainer: "pl.Trainer") -> None:
