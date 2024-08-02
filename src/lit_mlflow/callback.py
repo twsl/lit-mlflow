@@ -3,7 +3,11 @@ from pathlib import Path
 import tempfile
 from typing import Any, cast
 
-from lightning.fabric.utilities.rank_zero import rank_zero_info, rank_zero_only, rank_zero_warn  # type: ignore
+from lightning.fabric.utilities.rank_zero import (
+    rank_zero_info,  # type: ignore  # noqa: PGH003
+    rank_zero_only,
+    rank_zero_warn,  # type: ignore  # noqa: PGH003
+)
 import lightning.pytorch as pl
 from lightning.pytorch.callbacks import Callback, DeviceStatsMonitor, EarlyStopping
 from lightning.pytorch.core.optimizer import LightningOptimizer
