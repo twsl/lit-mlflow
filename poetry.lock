@@ -2399,13 +2399,13 @@ files = [
 
 [[package]]
 name = "mlflow"
-version = "2.16.0"
+version = "2.17.0"
 description = "MLflow is an open source platform for the complete machine learning lifecycle"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "mlflow-2.16.0-py3-none-any.whl", hash = "sha256:9f27ef6ae7a82d7ecd67b6b4a4d50637a5e8160639115570fbc689758f9c0b54"},
-    {file = "mlflow-2.16.0.tar.gz", hash = "sha256:82ea1a2e800f404f1586783b7636091c0a5754cf9ff45afeadf3a5e467f5168f"},
+    {file = "mlflow-2.17.0-py3-none-any.whl", hash = "sha256:64fbc0dfcb7322ed4cbccadc2f533bdd2944001b983ea8c10db45c7c59b46b7c"},
+    {file = "mlflow-2.17.0.tar.gz", hash = "sha256:5bb2089b833da48e4a92a9b4cb1cb5fa509a571eb3c603be39f5238b4721e076"},
 ]
 
 [package.dependencies]
@@ -2420,7 +2420,7 @@ Jinja2 = [
 ]
 markdown = ">=3.3,<4"
 matplotlib = "<4"
-mlflow-skinny = "2.16.0"
+mlflow-skinny = "2.17.0"
 numpy = "<3"
 pandas = "<3"
 pyarrow = ">=4.0.0,<18"
@@ -2432,23 +2432,24 @@ waitress = {version = "<4", markers = "platform_system == \"Windows\""}
 [package.extras]
 aliyun-oss = ["aliyunstoreplugin"]
 databricks = ["azure-storage-file-datalake (>12)", "boto3 (>1)", "botocore", "google-cloud-storage (>=1.30.0)"]
-extras = ["azureml-core (>=1.2.0)", "boto3", "botocore", "google-cloud-storage (>=1.30.0)", "kubernetes", "mlserver (>=1.2.0,!=1.3.1,<1.4.0)", "mlserver-mlflow (>=1.2.0,!=1.3.1,<1.4.0)", "prometheus-flask-exporter", "pyarrow", "pysftp", "requests-auth-aws-sigv4", "virtualenv"]
+extras = ["azureml-core (>=1.2.0)", "boto3", "botocore", "google-cloud-storage (>=1.30.0)", "kubernetes", "prometheus-flask-exporter", "pyarrow", "pysftp", "requests-auth-aws-sigv4", "virtualenv"]
 gateway = ["aiohttp (<4)", "boto3 (>=1.28.56,<2)", "fastapi (<1)", "pydantic (>=1.0,<3)", "slowapi (>=0.1.9,<1)", "tiktoken (<1)", "uvicorn[standard] (<1)", "watchfiles (<1)"]
 genai = ["aiohttp (<4)", "boto3 (>=1.28.56,<2)", "fastapi (<1)", "pydantic (>=1.0,<3)", "slowapi (>=0.1.9,<1)", "tiktoken (<1)", "uvicorn[standard] (<1)", "watchfiles (<1)"]
 jfrog = ["mlflow-jfrog-plugin"]
-langchain = ["langchain (>=0.1.0,<=0.2.15)"]
+langchain = ["langchain (>=0.1.0,<=0.3.1)"]
+mlserver = ["mlserver (>=1.2.0,!=1.3.1)", "mlserver-mlflow (>=1.2.0,!=1.3.1)"]
 sqlserver = ["mlflow-dbstore"]
 xethub = ["mlflow-xethub"]
 
 [[package]]
 name = "mlflow-skinny"
-version = "2.16.0"
+version = "2.17.0"
 description = "MLflow is an open source platform for the complete machine learning lifecycle"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "mlflow_skinny-2.16.0-py3-none-any.whl", hash = "sha256:c55541f50efd0f6637377b10e8a654847a3fcd815b8680a95f02e0ca6bd7700c"},
-    {file = "mlflow_skinny-2.16.0.tar.gz", hash = "sha256:9b823173063743783b4e7b6c52bdadcc7d9dab48eb883ac454c0d56609df6b2d"},
+    {file = "mlflow_skinny-2.17.0-py3-none-any.whl", hash = "sha256:9eff7160f7459e09c01cc5bc2a68fdba7b64adbce069ef6d1013569830569048"},
+    {file = "mlflow_skinny-2.17.0.tar.gz", hash = "sha256:bbb770368e68ffe783a76fa38854618c1411b44bda21eb8b770ca4cc28801299"},
 ]
 
 [package.dependencies]
@@ -2469,11 +2470,12 @@ sqlparse = ">=0.4.0,<1"
 [package.extras]
 aliyun-oss = ["aliyunstoreplugin"]
 databricks = ["azure-storage-file-datalake (>12)", "boto3 (>1)", "botocore", "google-cloud-storage (>=1.30.0)"]
-extras = ["azureml-core (>=1.2.0)", "boto3", "botocore", "google-cloud-storage (>=1.30.0)", "kubernetes", "mlserver (>=1.2.0,!=1.3.1,<1.4.0)", "mlserver-mlflow (>=1.2.0,!=1.3.1,<1.4.0)", "prometheus-flask-exporter", "pyarrow", "pysftp", "requests-auth-aws-sigv4", "virtualenv"]
+extras = ["azureml-core (>=1.2.0)", "boto3", "botocore", "google-cloud-storage (>=1.30.0)", "kubernetes", "prometheus-flask-exporter", "pyarrow", "pysftp", "requests-auth-aws-sigv4", "virtualenv"]
 gateway = ["aiohttp (<4)", "boto3 (>=1.28.56,<2)", "fastapi (<1)", "pydantic (>=1.0,<3)", "slowapi (>=0.1.9,<1)", "tiktoken (<1)", "uvicorn[standard] (<1)", "watchfiles (<1)"]
 genai = ["aiohttp (<4)", "boto3 (>=1.28.56,<2)", "fastapi (<1)", "pydantic (>=1.0,<3)", "slowapi (>=0.1.9,<1)", "tiktoken (<1)", "uvicorn[standard] (<1)", "watchfiles (<1)"]
 jfrog = ["mlflow-jfrog-plugin"]
-langchain = ["langchain (>=0.1.0,<=0.2.15)"]
+langchain = ["langchain (>=0.1.0,<=0.3.1)"]
+mlserver = ["mlserver (>=1.2.0,!=1.3.1)", "mlserver-mlflow (>=1.2.0,!=1.3.1)"]
 sqlserver = ["mlflow-dbstore"]
 xethub = ["mlflow-xethub"]
 
@@ -5063,4 +5065,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "263decf01a8ba774412279fbe87540f36d87894a036352c7425a8f82546b5b40"
+content-hash = "82152e874fb2e5a6b1bc49bcf0e772b77d00661ceff8668678bfec3f801f853e"
