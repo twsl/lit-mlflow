@@ -3560,13 +3560,13 @@ dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "pygments
 
 [[package]]
 name = "pytest-cases"
-version = "3.8.5"
+version = "3.8.6"
 description = "Separate test code from test cases in pytest."
 optional = false
 python-versions = "*"
 files = [
-    {file = "pytest-cases-3.8.5.tar.gz", hash = "sha256:c92054187847a7d30d8ab6709fb1670a830e4e19234be700c85c96b6d7102c16"},
-    {file = "pytest_cases-3.8.5-py2.py3-none-any.whl", hash = "sha256:0c8e3727f6494e65b47321adbd94c767277c7b5de1bd40dd518a13f7443b1fff"},
+    {file = "pytest_cases-3.8.6-py2.py3-none-any.whl", hash = "sha256:564c722492ea7e7ec3ac433fd14070180e65866f49fa35bfe938c0d5d9afba67"},
+    {file = "pytest_cases-3.8.6.tar.gz", hash = "sha256:5c24e0ab0cb6f8e802a469b7965906a333d3babb874586ebc56f7e2cbe1a7c44"},
 ]
 
 [package.dependencies]
@@ -5065,4 +5065,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "82152e874fb2e5a6b1bc49bcf0e772b77d00661ceff8668678bfec3f801f853e"
+content-hash = "fe829ece80cbe3938fbfc7708517af86fe6df6296b7beb637503e875bcdbd000"
