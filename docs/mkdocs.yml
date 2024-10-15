@@ -72,8 +72,8 @@ extra:
 plugins:
   - search
   - mkdocs-jupyter
-  - mkapi
   - awesome-pages
+  - mkapi
   - tags
   - git-authors
   - git-revision-date-localized:

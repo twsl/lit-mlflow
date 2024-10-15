@@ -7,7 +7,7 @@
         120
     ],
     "files.eol": "\n",
-    "python.envFile": "${workspaceFolder}/.databricks/.databricks.env",
+    "python.envFile": "${workspaceRoot}/.env",
     "python.languageServer": "Pylance",
     "python.analysis.autoImportCompletions": true,
     "python.analysis.completeFunctionParens": true,
