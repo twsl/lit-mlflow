@@ -65,7 +65,7 @@ trainer = pl.Trainer(
 ## Docs
 
 ```bash
-poetry run mkdocs build -f ./docs/mkdocs.yaml -d ./docs/_build/
+poetry run mkdocs build -f ./docs/mkdocs.yml -d ./_build/
 ```
 
 
