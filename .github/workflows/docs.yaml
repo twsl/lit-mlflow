@@ -48,6 +48,7 @@ jobs:
         with:
           path: .venv
           key: venv-Linux-3.10-${{ hashFiles('poetry.lock') }}
+          restore-keys: venv-Linux-3.10-
 
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
@@ -57,10 +58,12 @@ jobs:
         run: poetry build
 
       - name: Build MkDocs docs
-        run: poetry run mkdocs build -f ./docs/mkdocs.yml -d ./_build/ -v
+        env:
+          JUPYTER_PLATFORM_DIRS: 1
+        run: poetry run mkdocs build -f ./docs/mkdocs.yml -d ./_build/
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4 # cant update yet on GHES
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT }}
           path: ./docs/_build/
@@ -82,15 +85,15 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v4 # cant update yet on GHES
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3 # cant update yet on GHES
+        uses: actions/upload-pages-artifact@v3
         with:
           path: artifacts/${{ env.ARTIFACT }}/
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4 # cant update yet on GHES
+        uses: actions/deploy-pages@v4
