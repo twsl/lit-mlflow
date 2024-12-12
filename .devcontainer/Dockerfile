@@ -8,6 +8,10 @@ FROM mcr.microsoft.com/devcontainers/python:1-${VARIANT}
 # They are installed by the base image (python) which does not have the patch.
 RUN python3 -m pip install --upgrade setuptools
 
+# databricks-cli
+RUN curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+
 # Install poetry
 RUN pip install --upgrade pip
 

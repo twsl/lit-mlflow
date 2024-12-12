@@ -18,9 +18,9 @@ from lightning.pytorch.utilities.model_summary.model_summary import ModelSummary
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 import mlflow
 from mlflow import MlflowClient, MlflowException
-from mlflow.data.code_dataset_source import CodeDatasetSource
-from mlflow.data.meta_dataset import MetaDataset
+from mlflow.entities.dataset import Dataset
 from mlflow.entities.dataset_input import DatasetInput
+from mlflow.entities.input_tag import InputTag
 from mlflow.entities.run import Run
 from mlflow.entities.run_status import RunStatus
 from mlflow.models import Model
@@ -182,11 +182,21 @@ class MlFlowAutoCallback(Callback):
 
     def _log_dataset_info(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
         if hasattr(trainer, "datamodule") and trainer.datamodule:  # pyright: ignore[reportAttributeAccessIssue]
-            dataset = trainer.datamodule.train_dataloader().dataset  # pyright: ignore[reportAttributeAccessIssue]
+            dm = trainer.datamodule.train_dataloader()  # pyright: ignore[reportAttributeAccessIssue]
+            dataset = dm.dataset  # pyright: ignore[reportAttributeAccessIssue]
             if self.logger and self.logger.run_id and self.client:
-                source = CodeDatasetSource(tags={"class": dataset.__class__.__name__})
-                meta_ds = MetaDataset(source=source, name=dataset.__class__.__name__)
-                ds_input = DatasetInput(dataset=meta_ds, tags=[])  # pyright: ignore[reportArgumentType]
+                meta_ds = Dataset(
+                    name=dataset.__class__.__name__,
+                    digest="",
+                    source=dm.__class__.__name__,
+                    source_type="",
+                )
+                ds_input = DatasetInput(
+                    dataset=meta_ds,
+                    tags=[
+                        InputTag("class", dataset.__class__.__name__),
+                    ],
+                )
                 self.client.log_inputs(run_id=self.logger.run_id, datasets=[ds_input])
 
     def _patch_device_stats_monitor(self, trainer: "pl.Trainer") -> None:
