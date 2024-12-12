@@ -23,7 +23,7 @@
     // Use 'forwardPorts' to make a list of ports inside the container available locally.
     // "forwardPorts": [],
     // Use 'postCreateCommand' to run commands after the container is created.
-    "postCreateCommand": "poetry install && pre-commit install && pre-commit autoupdate",
+    "postCreateCommand": "poetry install && pre-commit install",
     // Configure tool-specific properties.
     "customizations": {
         // Configure properties specific to VS Code.
@@ -56,7 +56,8 @@
                 "python.testing.cwd": "${workspaceFolder}",
                 "python.testing.pytestArgs": [
                     "tests",
-                    "-v"
+                    "-v",
+                    "--no-cov"
                 ],
                 "[python]": {
                     "editor.formatOnSave": true,
@@ -92,6 +93,7 @@
                 "GitHub.copilot",
                 "GitHub.copilot-chat",
                 "github.vscode-github-actions",
+                "SanjulaGanepola.github-local-actions",
                 "charliermarsh.ruff",
                 "esbenp.prettier-vscode",
                 "ms-vscode.test-adapter-converter",
