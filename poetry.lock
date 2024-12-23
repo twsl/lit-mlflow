@@ -1904,13 +1904,13 @@ files = [
 
 [[package]]
 name = "lightning"
-version = "2.5.0"
+version = "2.5.0.post0"
 description = "The Deep Learning framework to train, deploy, and ship AI products Lightning fast."
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "lightning-2.5.0-py3-none-any.whl", hash = "sha256:f2c3ad24c7e2ba57951d05d7e12e2c8a9fb375ebe6277c300bbade3bda3aecce"},
-    {file = "lightning-2.5.0.tar.gz", hash = "sha256:3090d979acbc5a97a91906687f9530a246f357fd6b1a81a38d8a8c998ba6db5f"},
+    {file = "lightning-2.5.0.post0-py3-none-any.whl", hash = "sha256:b08463326e6fb39cb3e4db8ff2660a80ce3372a0688c80e3370c091346ea220c"},
+    {file = "lightning-2.5.0.post0.tar.gz", hash = "sha256:f720fe4f6d03a7f15f9aef3112c5a0d1eafd8d27b903f4a1354b609685b2ec70"},
 ]
 
 [package.dependencies]
