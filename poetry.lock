@@ -172,6 +172,18 @@ files = [
 ]
 
 [[package]]
+name = "astdoc"
+version = "1.2.1"
+description = "A lightweight Python library for parsing AST and extracting docstring information. Automatically generate documentation from Python source code by analyzing abstract syntax trees and docstrings."
+optional = false
+python-versions = ">=3.10"
+groups = ["docs"]
+files = [
+    {file = "astdoc-1.2.1-py3-none-any.whl", hash = "sha256:37de6b2cc0974e0746bf04734a81ea6b10469a5f41f4d39cbc7b12a9ced8e545"},
+    {file = "astdoc-1.2.1.tar.gz", hash = "sha256:6b35d867b1dd3b5e464d9adf810814241f2d9884d023c7b2f3a9a4116c5d6a10"},
+]
+
+[[package]]
 name = "asttokens"
 version = "3.0.0"
 description = "Annotate AST trees with source code positions"
@@ -2418,21 +2430,21 @@ files = [
 
 [[package]]
 name = "mkapi"
-version = "3.0.22"
-description = "A plugin for MkDocs to generate API documentation"
+version = "4.4.0"
+description = "MkDocs plugin for automatic API documentation generation from Python docstrings"
 optional = false
 python-versions = ">=3.10"
 groups = ["docs"]
 files = [
-    {file = "mkapi-3.0.22-py3-none-any.whl", hash = "sha256:378aef4cb71bf495c7ff4445cdac25642cb15746d99d7d0bc3d4d8ec130140d3"},
-    {file = "mkapi-3.0.22.tar.gz", hash = "sha256:722f9751145dd0ce8b3c22613cb3d1aadc19b59568358da0a88c7b85d0279fce"},
+    {file = "mkapi-4.4.0-py3-none-any.whl", hash = "sha256:dc92c4399951b2699d0c7f8b3ce9f12e7effbf4f7df428d03b95ec1ec1658137"},
+    {file = "mkapi-4.4.0.tar.gz", hash = "sha256:5476f2e88af230ec62d394d4b8e1e1be526e376a407b3763d544b5d436536916"},
 ]
 
 [package.dependencies]
+astdoc = ">=1.2.0"
 jinja2 = "*"
 mkdocs = ">=1.6.0"
 mkdocs-material = "*"
-rich = "*"
 tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
 
 [[package]]
@@ -4683,7 +4695,7 @@ version = "13.9.4"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
 optional = false
 python-versions = ">=3.8.0"
-groups = ["dev", "docs"]
+groups = ["dev"]
 files = [
     {file = "rich-13.9.4-py3-none-any.whl", hash = "sha256:6049d5e6ec054bf2779ab3358186963bac2ea89175919d699e378b99738c2a90"},
     {file = "rich-13.9.4.tar.gz", hash = "sha256:439594978a49a09530cff7ebc4b5c7103ef57baf48d5ea3184f21d9a2befa098"},
@@ -5848,4 +5860,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "709c88bebf963a7e4ef7bfdeec334498b24aadacf2263255d9c85c9c89106bba"
+content-hash = "6235561d37e9cc9fcc949fde0d8614aaa8dc00c5ddcf5a9fdf3eeacd2b9303f2"
