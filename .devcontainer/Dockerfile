@@ -15,7 +15,7 @@ RUN curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/insta
 # Install poetry
 RUN pip install --upgrade pip
 
-ENV PATH "/etc/poetry/bin:$PATH"
+ENV PATH="/etc/poetry/bin:$PATH"
 RUN curl -sSL  https://install.python-poetry.org | POETRY_HOME=/etc/poetry python - \
     && poetry completions bash >> ~/.bash_completion \
     && poetry config virtualenvs.create false \

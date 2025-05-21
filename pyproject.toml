@@ -5,7 +5,7 @@ build-backend = "poetry_dynamic_versioning.backend"
 [project]
 name = "lit-mlflow"
 version = "0.0.0"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 description = "An improved Lightning mlflow logger"
 readme = "README.md"
 license = { text = "MIT" }
@@ -33,38 +33,41 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.10"
-mlflow = "^2.20.3"
-lightning = "^2.4.0"
+python = "^3.11"
+mlflow = "^2.22.0"
+lightning = "^2.5.0"
 databricks-cli = "^0.18.0"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.8.6"
-bandit = "^1.8.0"
-pre-commit = "^4.0.1"
-pyright = "^1.1.391"
+ruff = "^0.11.10"
+bandit = "^1.8.3"
+pre-commit = "^4.2.0"
+pyright = "^1.1.400"
+vulture = "^2.14"
+copier = "^9.7.1"
 ipykernel = "^6.29.5"
-ipywidgets = "^8.1.5"
-ipython = "^8.31.0"
+ipywidgets = "^8.1.7"
+ipython = "^9.1.0"
 jupytext = " ^1.16.6"
-nbconvert = "^7.16.5"
+nbconvert = "^7.16.6"
 
 [tool.poetry.group.test.dependencies]
-pytest = "^8.3.4"
-pytest-cov = "^6.0.0"
-pytest-mock = "^3.12.0"
+pytest = "^8.3.5"
+pytest-cov = "^6.1.1"
+pytest-mock = "^3.14.0"
 pytest-cases = "^3.8.6"
 pytest-benchmark = "^5.1.0"
+pytest-github-actions-annotate-failures = "^0.3.0"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.6.1"
-mkdocs-material = "^9.5.49"
-mkdocs-git-revision-date-localized-plugin = "^1.2.9"
+mkdocs-material = "^9.6.14"
+mkdocs-git-revision-date-localized-plugin = "^1.4.5"
 mkdocs-awesome-pages-plugin = "^2.10.1"
-mkdocs-git-authors-plugin = "^0.9.2"
-mkapi = "^3.0.22"
+mkdocs-git-authors-plugin = "^0.9.5"
+mkapi = "^4.4.0"
 markdown-callouts = "^0.4.0"
-pygments = "^2.18.0"
+pygments = "^2.19.0"
 mkdocs-jupyter = "^0.25.1"
 
 [tool.poetry.group.debug]
@@ -100,7 +103,7 @@ __version_tuple__ = (0, 0, 0)
 [tool.pytest.ini_options]
 minversion = "8.0"
 # https://code.visualstudio.com/docs/python/testing#_pytest-configuration-settings
-addopts = "--doctest-glob='test_*.md' --cov=src/lit_mlflow --cov-report xml"
+addopts = "--doctest-glob='test_*.md' --cov=src/lit_mlflow --cov-config=pyproject.toml"
 testpaths = [
     "tests",
 ]
@@ -110,6 +113,7 @@ branch = true
 omit = [
     "tests/*",
 ]
+source_pkgs = ["lit_mlflow"]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -237,3 +241,9 @@ pythonPlatform = "Linux"
 include = ["src"]
 reportMissingImports = true
 reportMissingTypeStubs = false
+
+[tool.vulture]
+sort_by_size = true
+verbose = false
+min_confidence = 100
+paths = ["src"]

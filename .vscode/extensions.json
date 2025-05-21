@@ -10,7 +10,6 @@
         "charliermarsh.ruff",
         "esbenp.prettier-vscode",
         "ms-vscode.test-adapter-converter",
-        "littlefoxteam.vscode-python-test-adapter",
         "njqdev.vscode-python-typehint",
         "KevinRose.vsc-python-indent",
         "medo64.render-crlf",
@@ -27,8 +26,8 @@
         "ms-vscode-remote.vscode-remote-extensionpack",
         "ms-azuretools.vscode-docker",
         "uctakeoff.vscode-counter",
-        "ExecutableBookProject.myst-highlight",
         "databricks.databricks",
-        "paiqo.databricks-vscode"
+        "paiqo.databricks-vscode",
+        "redhat.vscode-yaml"
     ]
 }
