@@ -28,6 +28,7 @@
         "uctakeoff.vscode-counter",
         "databricks.databricks",
         "paiqo.databricks-vscode",
-        "redhat.vscode-yaml"
+        "redhat.vscode-yaml",
+        "sebastienfi.dead-code-finder"
     ]
 }

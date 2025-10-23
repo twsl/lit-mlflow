@@ -117,7 +117,7 @@
                 "databricks.databricks",
                 "paiqo.databricks-vscode",
                 "redhat.vscode-yaml",
-                "RandomFractalsInc.vscode-data-preview"
+                "sebastienfi.dead-code-finder"
             ]
         }
     },
