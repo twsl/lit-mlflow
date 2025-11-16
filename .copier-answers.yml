@@ -21,6 +21,7 @@ include_docs: true
 include_notebooks: true
 include_sample_code: false
 line_ending: lf
+precommit_tool: prek
 primary_branch: main
 project_description: An improved Lightning mlflow logger
 project_name: lit-mlflow
