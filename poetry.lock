@@ -2356,14 +2356,14 @@ files = [
 
 [[package]]
 name = "lightning"
-version = "2.5.5"
+version = "2.5.6"
 description = "The Deep Learning framework to train, deploy, and ship AI products Lightning fast."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "lightning-2.5.5-py3-none-any.whl", hash = "sha256:69eb248beadd7b600bf48eff00a0ec8af171ec7a678d23787c4aedf12e225e8f"},
-    {file = "lightning-2.5.5.tar.gz", hash = "sha256:4d3d66c5b1481364a7e6a1ce8ddde1777a04fa740a3145ec218a9941aed7dd30"},
+    {file = "lightning-2.5.6-py3-none-any.whl", hash = "sha256:25bb2053078c2efc57c082fda89dfbd975dfa76beb08def191947c2b571a8c8a"},
+    {file = "lightning-2.5.6.tar.gz", hash = "sha256:57b6abe87080895bc237fb7f36b7b4abaa2793760cbca00e3907e56607e0ed27"},
 ]
 
 [package.dependencies]
@@ -6795,4 +6795,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "db2aecefd5362d12565f460387b11dfb547ae82c6b3e3556589daf02129f5260"
+content-hash = "21a951bc0ce05def6a6bd62593afa4c1db02916d2e1636cc6869bbdae7745f38"
