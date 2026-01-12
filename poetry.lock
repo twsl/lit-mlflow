@@ -821,14 +821,14 @@ test-no-images = ["pytest", "pytest-cov", "pytest-rerunfailures", "pytest-xdist"
 
 [[package]]
 name = "copier"
-version = "9.11.0"
+version = "9.11.1"
 description = "A library for rendering project templates."
 optional = false
 python-versions = ">=3.10"
 groups = ["dev"]
 files = [
-    {file = "copier-9.11.0-py3-none-any.whl", hash = "sha256:628adac090f7b333bb64bf5cab03456b99971a77e4d5b2b979e30b8451cbda9d"},
-    {file = "copier-9.11.0.tar.gz", hash = "sha256:e73d6989fa140b621a5c571984c46122704086a9caa84a6e07699a5234d297ab"},
+    {file = "copier-9.11.1-py3-none-any.whl", hash = "sha256:e23c4b3c0c1687c519d8ae62496507164cc482b96af9e3ea7851ce02b64eb978"},
+    {file = "copier-9.11.1.tar.gz", hash = "sha256:50e5a39b7dde94ad7a3b66b5a64070359df532c13d64dabb89dde81f7c7347eb"},
 ]
 
 [package.dependencies]
@@ -6789,4 +6789,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "36e3a6d90b4a29ecd3c5eb58314cb5fde74bc24298a6088d7aa6f19db313cae9"
+content-hash = "557ecab7a084f2acd803af58de21c14dfb84038bbaee1cc5c3245f1bca850d6f"
