@@ -7,15 +7,14 @@
         120
     ],
     "files.eol": "\n",
-    "python.envFile": "${workspaceRoot}/.env",
-    "python.languageServer": "Pylance",
+    "python.envFile": "${workspaceFolder}/.env",
+    "python.languageServer": "None",
     "python.analysis.autoImportCompletions": true,
     "python.analysis.completeFunctionParens": true,
     "python.analysis.autoFormatStrings": true,
     "python.analysis.inlayHints.variableTypes": true,
     "python.analysis.inlayHints.functionReturnTypes": true,
     "python.analysis.diagnosticMode": "workspace",
-    "python.analysis.typeCheckingMode": "strict",
     "python.terminal.activateEnvironment": true,
     "python.testing.autoTestDiscoverOnSaveEnabled": false,
     "python.testing.unittestEnabled": false,
@@ -35,8 +34,6 @@
             "source.fixAll.ruff": "always"
         }
     },
-    "testExplorer.codeLens": true,
-    "testExplorer.gutterDecoration": true,
     "git.enableSmartCommit": true,
     "git.autofetch": true,
     "autoDocstring.docstringFormat": "google-notypes",
