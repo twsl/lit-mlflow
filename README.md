@@ -45,11 +45,7 @@ Replace `mlflow.autolog()` with the `MlFlowAutoCallback`:
 from lit_mlflow import MlFlowAutoCallback
 import lightning.pytorch as pl
 
-trainer = pl.Trainer(
-    callbacks=[
-        MlFlowAutoCallback()
-    ]
-)
+trainer = pl.Trainer(callbacks=[MlFlowAutoCallback()])
 ```
 
 To support Databricks mlflow, use the `DbxMLFlowLogger` instead of the `MlFlowLogger`:
@@ -58,11 +54,7 @@ To support Databricks mlflow, use the `DbxMLFlowLogger` instead of the `MlFlowLo
 from lit_mlflow import DbxMLFlowLogger
 import lightning.pytorch as pl
 
-trainer = pl.Trainer(
-    logger=[
-        DbxMLFlowLogger()
-    ]
-)
+trainer = pl.Trainer(logger=[DbxMLFlowLogger()])
 ```
 
 ## Docs
