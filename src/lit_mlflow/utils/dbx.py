@@ -33,7 +33,7 @@ def patch_dbx_credentials() -> bool:
     """
     if is_in_databricks_notebook():
         # no direct dependency needed, available when in databricks environment
-        from databricks_cli.configure.provider import DatabricksConfig, get_config
+        from mlflow.legacy_databricks_cli.configure.provider import DatabricksConfig, get_config
 
         config: DatabricksConfig = get_config()
         if config:

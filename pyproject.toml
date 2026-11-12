@@ -43,7 +43,6 @@ default-groups = "all"
 
 [dependency-groups]
 dbx = [
-    "databricks-cli>=0.18.0",
     "mlflow>=3.18.0",
 ]
 dev = [
