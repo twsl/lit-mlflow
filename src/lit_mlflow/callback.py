@@ -3,11 +3,7 @@ from pathlib import Path
 import tempfile
 from typing import Any, cast
 
-from lightning.fabric.utilities.rank_zero import (
-    rank_zero_info,  # type: ignore  # noqa: PGH003
-    rank_zero_only,
-    rank_zero_warn,  # type: ignore  # noqa: PGH003
-)
+from lightning.fabric.utilities.rank_zero import rank_zero_info, rank_zero_only, rank_zero_warn
 import lightning.pytorch as pl
 from lightning.pytorch.callbacks import Callback, DeviceStatsMonitor, EarlyStopping
 from lightning.pytorch.core.optimizer import LightningOptimizer
@@ -25,7 +21,7 @@ from mlflow.entities.run import Run
 from mlflow.entities.run_status import RunStatus
 from mlflow.models import Model
 from mlflow.pytorch import pickle_module as mlflow_pytorch_pickle_module
-from torch.optim import Optimizer  # pyright: ignore[reportPrivateImportUsage]
+from torch.optim import Optimizer
 
 from lit_mlflow.logger import DbxMLFlowLogger
 from lit_mlflow.utils.dbx import get_databricks_tags
@@ -33,6 +29,12 @@ from lit_mlflow.utils.dbx import get_databricks_tags
 
 class MlFlowAutoCallback(Callback):
     def __init__(self, verbose: bool = True, patch_device_monitor: bool = True) -> None:
+        """Initialize callback state and supported MLflow logger types.
+
+        Args:
+            verbose: Stored verbosity setting; it does not currently change behavior.
+            patch_device_monitor: Whether to patch device statistics logging during setup.
+        """
         self.supported_loggers = (MLFlowLogger, DbxMLFlowLogger)
         self.verbose = verbose
         self.logger: MLFlowLogger | DbxMLFlowLogger | None = None
@@ -41,11 +43,24 @@ class MlFlowAutoCallback(Callback):
 
     @property
     def client(self) -> MlflowClient | None:
+        """Get the selected logger's MLflow client, if a logger is available.
+
+        Returns:
+            The MLflow client, or None when no supported logger is selected.
+        """
         if self.logger:
             return self.logger.experiment
         return None
 
     def _get_logger(self, loggers: list[Logger]) -> MLFlowLogger | DbxMLFlowLogger | None:
+        """Select the first supported logger and warn about unsupported loggers.
+
+        Args:
+            loggers: Loggers registered with the trainer.
+
+        Returns:
+            The first supported MLflow logger, or None if none is found.
+        """
         if isinstance(loggers, list):
             if len(loggers) == 0:
                 rank_zero_warn("Cannot log artifacts because Trainer has no logger.")
@@ -62,21 +77,57 @@ class MlFlowAutoCallback(Callback):
             return None
 
     def _prevent_entry(self, trainer: "pl.Trainer") -> bool:
+        """Check whether logging should be skipped because of logger or rank state.
+
+        Args:
+            trainer: Trainer whose global rank is checked.
+
+        Returns:
+            True when no supported logger is selected or the trainer is not rank zero.
+        """
         return self.logger is None or not trainer.is_global_zero
 
     def _get_optimizer(self, optimizer: LightningOptimizer | Optimizer) -> Optimizer:
+        """Unwrap a Lightning optimizer, leaving ordinary optimizers unchanged.
+
+        Args:
+            optimizer: Lightning wrapper or underlying optimizer.
+
+        Returns:
+            The underlying optimizer.
+        """
         return optimizer._optimizer if isinstance(optimizer, LightningOptimizer) else optimizer
 
     def _get_optimizer_name(self, optimizer: LightningOptimizer | Optimizer) -> str:
+        """Get the class name of the underlying optimizer.
+
+        Args:
+            optimizer: Lightning wrapper or underlying optimizer.
+
+        Returns:
+            The optimizer class name.
+        """
         opt = self._get_optimizer(optimizer)
         return opt.__class__.__name__
 
     def _get_optimizer_defaults(self, optimizer: LightningOptimizer | Optimizer) -> dict[str, Any]:
+        """Get the underlying optimizer's default parameters.
+
+        Args:
+            optimizer: Lightning wrapper or underlying optimizer.
+
+        Returns:
+            The optimizer defaults, or an empty dictionary if unavailable.
+        """
         opt = self._get_optimizer(optimizer)
         return opt.defaults if hasattr(opt, "defaults") else {}
 
     def _log_early_stop_params(self, early_stop_callback: EarlyStopping) -> None:
-        """Logs early stopping configuration parameters to MLflow."""
+        """Log available early stopping configuration and stopped epoch as parameters.
+
+        Args:
+            early_stop_callback: Callback providing the values to log.
+        """
         if self.logger is None:
             return None
 
@@ -88,7 +139,14 @@ class MlFlowAutoCallback(Callback):
         self.logger.log_hyperparams(params)
 
     def _log_early_stop_metrics(self, early_stop_callback: EarlyStopping) -> None:
-        """Logs early stopping behavior results (e.g. stopped epoch) as metrics to MLflow."""
+        """Log early stopping results when training stopped early.
+
+        The restored epoch metric is calculated from the stopped epoch and patience;
+        this method does not restore a checkpoint.
+
+        Args:
+            early_stop_callback: Callback providing the stopped epoch and metrics.
+        """
         if self.logger is None:
             return None
 
@@ -109,13 +167,27 @@ class MlFlowAutoCallback(Callback):
         self.logger.log_metrics(metrics)
 
     def _resolve_early_stopping_callback(self, trainer: "pl.Trainer") -> EarlyStopping | None:
+        """Find the first early stopping callback registered with the trainer.
+
+        Args:
+            trainer: Trainer whose callbacks are inspected.
+
+        Returns:
+            The first early stopping callback, or None if absent.
+        """
         if hasattr(trainer, "callbacks"):
-            for callback in cast(list[Callback], trainer.callbacks):  # pyright: ignore[reportAttributeAccessIssue]
+            for callback in cast(list[Callback], trainer.callbacks):
                 if isinstance(callback, EarlyStopping):
                     return callback
         return None
 
     def _log_model_summary(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+        """Generate and upload the full-depth model summary as a text artifact.
+
+        Args:
+            trainer: Trainer invoking the callback; unused.
+            pl_module: Model to summarize.
+        """
         summary = str(ModelSummary(pl_module, max_depth=-1))
         artifact_path = "model_summary.txt"
         if self.logger and self.logger._run_id and self.client:
@@ -126,6 +198,14 @@ class MlFlowAutoCallback(Callback):
                 self.client.log_artifacts(run_id, tmp_dir, artifact_path)
 
     def _log_model(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+        """Serialize and upload the model, then record its MLflow metadata.
+
+        A warning is emitted if recording the model metadata fails.
+
+        Args:
+            trainer: Trainer invoking the callback; unused.
+            pl_module: Model to serialize with pickle.
+        """
         if self.logger and self.logger.run_id and self.client:
             rank_zero_info("Saving the model and uploading to MLFlow!")
             with tempfile.TemporaryDirectory(prefix="test", suffix="test", dir=Path.cwd()) as tmp_dir:
@@ -139,9 +219,9 @@ class MlFlowAutoCallback(Callback):
                     mlflow_model=mlflow_model,
                     code_paths=None,
                     pickle_module=mlflow_pytorch_pickle_module,
+                    serialization_format="pickle",
                     signature=None,
                     input_example=None,
-                    requirements_file=None,
                     extra_files=None,
                     pip_requirements=None,
                     extra_pip_requirements=None,
@@ -162,6 +242,7 @@ class MlFlowAutoCallback(Callback):
             return None
 
     def _print_auto_logged_info(self) -> None:
+        """Print the run ID, model artifacts, parameters, metrics, and non-MLflow tags."""
         if self.logger and self.logger.run_id and self.client:
             run = mlflow.get_run(run_id=self.logger.run_id)
             if run:
@@ -174,6 +255,7 @@ class MlFlowAutoCallback(Callback):
                 rank_zero_info(f"tags: {tags}")
 
     def _log_cluster_tags(self) -> None:
+        """Collect Databricks cluster tags and attach them to the selected run."""
         tags = get_databricks_tags()
 
         if self.logger and self.logger.run_id and self.client:
@@ -181,9 +263,15 @@ class MlFlowAutoCallback(Callback):
                 self.client.set_tag(self.logger.run_id, key=tag, value=value)
 
     def _log_dataset_info(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        if hasattr(trainer, "datamodule") and trainer.datamodule:  # pyright: ignore[reportAttributeAccessIssue]
-            dm = trainer.datamodule.train_dataloader()  # pyright: ignore[reportAttributeAccessIssue]
-            dataset = dm.dataset  # pyright: ignore[reportAttributeAccessIssue]
+        """Log the training dataset and dataloader class names as an MLflow input.
+
+        Args:
+            trainer: Trainer providing the data module and training dataloader.
+            pl_module: Model passed by the callback hook; unused.
+        """
+        if hasattr(trainer, "datamodule") and trainer.datamodule:
+            dm = trainer.datamodule.train_dataloader()  # ty: ignore[missing-attribute]
+            dataset = dm.dataset
             if self.logger and self.logger.run_id and self.client:
                 meta_ds = Dataset(
                     name=dataset.__class__.__name__,
@@ -200,12 +288,35 @@ class MlFlowAutoCallback(Callback):
                 self.client.log_inputs(run_id=self.logger.run_id, datasets=[ds_input])
 
     def _patch_device_stats_monitor(self, trainer: "pl.Trainer") -> None:
+        """Patch device monitors to log statistics under system-prefixed metric keys.
+
+        Args:
+            trainer: Trainer whose device statistics monitors are patched.
+        """
+
         def _patched_prefix_metric_keys(
             metrics_dict: dict[str, float], prefix: str, separator: str
         ) -> dict[str, float]:
+            """Prefix each metric key using the logger's separator.
+
+            Args:
+                metrics_dict: Device statistics to rename.
+                prefix: Prefix to add to each key.
+                separator: Separator between the prefix and original key.
+
+            Returns:
+                Device statistics with prefixed keys.
+            """
             return {prefix + separator + k: v for k, v in metrics_dict.items()}
 
         def _patched_get_and_log_device_stats(self, trainer: "pl.Trainer", key: str) -> None:
+            """Collect enabled device statistics and log them through each trainer logger.
+
+            Args:
+                self: Device statistics monitor receiving the patched method.
+                trainer: Trainer providing the device, accelerator, and loggers.
+                key: Hook-specific suffix for the system metric prefix.
+            """
             if not trainer._logger_connector.should_update_logs:
                 return
 
@@ -229,7 +340,7 @@ class MlFlowAutoCallback(Callback):
 
         patched = False
         if hasattr(trainer, "callbacks"):
-            for callback in cast(list[Callback], trainer.callbacks):  # pyright: ignore[reportAttributeAccessIssue]
+            for callback in cast(list[Callback], trainer.callbacks):
                 if isinstance(callback, DeviceStatsMonitor):
                     callback._get_and_log_device_stats = _patched_get_and_log_device_stats.__get__(
                         callback, DeviceStatsMonitor
@@ -242,7 +353,16 @@ class MlFlowAutoCallback(Callback):
 
     @rank_zero_only
     def setup(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", stage: str) -> None:
-        """Called when fit, validate, test, predict, or tune begins."""
+        """Disable MLflow autologging, configure logging, and mark the run as running.
+
+        Setup also logs cluster and training dataset metadata and optionally patches
+        device statistics monitors.
+
+        Args:
+            trainer: Trainer providing loggers, callbacks, and data.
+            pl_module: Model passed to dataset metadata logging.
+            stage: Lightning stage invoking setup; unused.
+        """
         if not self.autologging_disabled:
             rank_zero_info("Starting MLFlow Databricks logging!")
             rank_zero_info("Default auto logging disabled!")
@@ -262,7 +382,13 @@ class MlFlowAutoCallback(Callback):
 
     @rank_zero_only
     def teardown(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", stage: str) -> None:
-        """Called when fit, validate, test, predict, or tune ends."""
+        """Mark the run finished and terminate it when the fitting stage ends.
+
+        Args:
+            trainer: Trainer whose global rank is checked.
+            pl_module: Model passed by the callback hook; unused.
+            stage: Lightning stage that has ended.
+        """
         if self._prevent_entry(trainer):
             return None
 
@@ -273,85 +399,131 @@ class MlFlowAutoCallback(Callback):
                 self.client.set_terminated(run_id=self.logger.run_id, status=RunStatus.to_string(RunStatus.FINISHED))
 
     def on_fit_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when fit begins."""
+        """Do nothing when fitting begins.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being fitted.
+        """
 
     def on_fit_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when fit ends."""
+        """Do nothing when fitting ends.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being fitted.
+        """
 
     def on_sanity_check_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the validation sanity check starts."""
+        """Do nothing when the validation sanity check starts.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being validated.
+        """
 
     def on_sanity_check_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the validation sanity check ends."""
+        """Do nothing when the validation sanity check ends.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being validated.
+        """
 
     def on_train_batch_start(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", batch: Any, batch_idx: int
     ) -> None:
-        """Called when the train batch begins."""
+        """Do nothing when a training batch begins.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being trained.
+            batch: Current training batch.
+            batch_idx: Index of the batch.
+        """
 
     def on_train_batch_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs: STEP_OUTPUT, batch: Any, batch_idx: int
     ) -> None:
-        """Called when the train batch ends.
+        """Do nothing when a training batch ends.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being trained.
+            outputs: Output from the training step.
+            batch: Current training batch.
+            batch_idx: Index of the batch.
 
         Note:
-            The value ``outputs["loss"]`` here will be the normalized value w.r.t ``accumulate_grad_batches`` of the
-            loss returned from ``training_step``.
-
+            When present, ``outputs["loss"]`` is normalized by ``accumulate_grad_batches``.
         """
 
     def on_train_epoch_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the train epoch begins."""
+        """Do nothing when a training epoch begins.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being trained.
+        """
 
     def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the train epoch ends.
+        """Log callback metrics as floats using the current epoch as the step.
 
-        To access all batch outputs at the end of the epoch, you can cache step outputs as an attribute of the
-        :class:`lightning.pytorch.core.LightningModule` and access them in this hook:
-
-        .. code-block:: python
-
-            class MyLightningModule(L.LightningModule):
-                def __init__(self):
-                    super().__init__()
-                    self.training_step_outputs = []
-
-                def training_step(self):
-                    loss = ...
-                    self.training_step_outputs.append(loss)
-                    return loss
-
-
-            class MyCallback(L.Callback):
-                def on_train_epoch_end(self, trainer, pl_module):
-                    # do something with all training_step outputs, for example:
-                    epoch_mean = torch.stack(pl_module.training_step_outputs).mean()
-                    pl_module.log("training_epoch_mean", epoch_mean)
-                    # free up the memory
-                    pl_module.training_step_outputs.clear()
-
+        Args:
+            trainer: Trainer providing the callback metrics.
+            pl_module: Model providing the current epoch.
         """
         if self.logger:
             metrics = {str(key): float(value) for key, value in trainer.callback_metrics.items()}
             self.logger.log_metrics(metrics, pl_module.current_epoch)
 
     def on_validation_epoch_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the val epoch begins."""
+        """Do nothing when a validation epoch begins.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being validated.
+        """
 
     def on_validation_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the val epoch ends."""
+        """Do nothing when a validation epoch ends.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being validated.
+        """
 
     def on_test_epoch_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the test epoch begins."""
+        """Do nothing when a test epoch begins.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being tested.
+        """
 
     def on_test_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the test epoch ends."""
+        """Do nothing when a test epoch ends.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being tested.
+        """
 
     def on_predict_epoch_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the predict epoch begins."""
+        """Do nothing when a prediction epoch begins.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model making predictions.
+        """
 
     def on_predict_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the predict epoch ends."""
+        """Do nothing when a prediction epoch ends.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model making predictions.
+        """
 
     def on_validation_batch_start(
         self,
@@ -361,7 +533,15 @@ class MlFlowAutoCallback(Callback):
         batch_idx: int,
         dataloader_idx: int = 0,
     ) -> None:
-        """Called when the validation batch begins."""
+        """Do nothing when a validation batch begins.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being validated.
+            batch: Current validation batch.
+            batch_idx: Index of the batch.
+            dataloader_idx: Index of the validation dataloader.
+        """
 
     def on_validation_batch_end(
         self,
@@ -372,7 +552,16 @@ class MlFlowAutoCallback(Callback):
         batch_idx: int,
         dataloader_idx: int = 0,
     ) -> None:
-        """Called when the validation batch ends."""
+        """Do nothing when a validation batch ends.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being validated.
+            outputs: Output from the validation step.
+            batch: Current validation batch.
+            batch_idx: Index of the batch.
+            dataloader_idx: Index of the validation dataloader.
+        """
 
     def on_test_batch_start(
         self,
@@ -382,7 +571,15 @@ class MlFlowAutoCallback(Callback):
         batch_idx: int,
         dataloader_idx: int = 0,
     ) -> None:
-        """Called when the test batch begins."""
+        """Do nothing when a test batch begins.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being tested.
+            batch: Current test batch.
+            batch_idx: Index of the batch.
+            dataloader_idx: Index of the test dataloader.
+        """
 
     def on_test_batch_end(
         self,
@@ -393,7 +590,16 @@ class MlFlowAutoCallback(Callback):
         batch_idx: int,
         dataloader_idx: int = 0,
     ) -> None:
-        """Called when the test batch ends."""
+        """Do nothing when a test batch ends.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being tested.
+            outputs: Output from the test step.
+            batch: Current test batch.
+            batch_idx: Index of the batch.
+            dataloader_idx: Index of the test dataloader.
+        """
 
     def on_predict_batch_start(
         self,
@@ -403,7 +609,15 @@ class MlFlowAutoCallback(Callback):
         batch_idx: int,
         dataloader_idx: int = 0,
     ) -> None:
-        """Called when the predict batch begins."""
+        """Do nothing when a prediction batch begins.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model making predictions.
+            batch: Current prediction batch.
+            batch_idx: Index of the batch.
+            dataloader_idx: Index of the prediction dataloader.
+        """
 
     def on_predict_batch_end(
         self,
@@ -414,11 +628,25 @@ class MlFlowAutoCallback(Callback):
         batch_idx: int,
         dataloader_idx: int = 0,
     ) -> None:
-        """Called when the predict batch ends."""
+        """Do nothing when a prediction batch ends.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model making predictions.
+            outputs: Output from the prediction step.
+            batch: Current prediction batch.
+            batch_idx: Index of the batch.
+            dataloader_idx: Index of the prediction dataloader.
+        """
 
     @rank_zero_only
     def on_train_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the train begins."""
+        """Tag the run for training and log epochs, optimizer defaults, and early stopping settings.
+
+        Args:
+            trainer: Trainer providing configuration, optimizers, and callbacks.
+            pl_module: Model passed by the callback hook; unused.
+        """
         if self._prevent_entry(trainer):
             return None
 
@@ -447,7 +675,12 @@ class MlFlowAutoCallback(Callback):
 
     @rank_zero_only
     def on_train_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the train ends."""
+        """Log early stopping results, the model summary, and the serialized model.
+
+        Args:
+            trainer: Trainer providing callbacks and the global rank.
+            pl_module: Model to summarize and serialize.
+        """
         if self._prevent_entry(trainer):
             return None
 
@@ -461,7 +694,12 @@ class MlFlowAutoCallback(Callback):
 
     @rank_zero_only
     def on_validation_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the validation loop begins."""
+        """Set the run's mode tag to validating when a logger is available.
+
+        Args:
+            trainer: Trainer invoking the hook; unused.
+            pl_module: Model being validated; unused.
+        """
         if self.logger and self.logger.run_id and self.client:
             run_id = str(self.logger.run_id)
 
@@ -469,29 +707,60 @@ class MlFlowAutoCallback(Callback):
 
     @rank_zero_only
     def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the validation loop ends."""
+        """Do nothing when validation ends.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being validated.
+        """
 
     @rank_zero_only
     def on_test_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the test begins."""
+        """Set the run's mode tag to testing on global rank zero.
+
+        Args:
+            trainer: Trainer whose global rank is checked.
+            pl_module: Model being tested; unused.
+        """
         if self._prevent_entry(trainer):
             return None
         if self.logger and self.logger.run_id and self.client:
             self.client.set_tag(self.logger.run_id, key="Mode", value="testing")
 
     def on_test_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the test ends."""
+        """Do nothing when testing ends.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model being tested.
+        """
         # originally, mlflow.autolog changes the mode to testing here, but we do it in on_test_start
 
     def on_predict_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when the predict begins."""
+        """Do nothing when prediction begins.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model making predictions.
+        """
 
     def on_predict_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        """Called when predict ends."""
+        """Do nothing when prediction ends.
+
+        Args:
+            trainer: Trainer invoking the hook.
+            pl_module: Model making predictions.
+        """
 
     @rank_zero_only
     def on_exception(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", exception: BaseException) -> None:
-        """Called when any trainer execution is interrupted by an exception."""
+        """Mark the MLflow run as failed when trainer execution raises an exception.
+
+        Args:
+            trainer: Trainer whose global rank is checked.
+            pl_module: Model passed by the callback hook; unused.
+            exception: Exception that interrupted execution; unused.
+        """
         if self._prevent_entry(trainer):
             return
         if self.logger and self.logger.run_id and self.client:
