@@ -1,7 +1,9 @@
+from collections.abc import Callable
 import os
 from pathlib import Path
+import shutil
 import tempfile
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from lightning.fabric.utilities.rank_zero import rank_zero_info, rank_zero_only, rank_zero_warn
 import lightning.pytorch as pl
@@ -19,8 +21,10 @@ from mlflow.entities.dataset_input import DatasetInput
 from mlflow.entities.input_tag import InputTag
 from mlflow.entities.run import Run
 from mlflow.entities.run_status import RunStatus
-from mlflow.models import Model
+from mlflow.models import Model, ModelSignature
 from mlflow.pytorch import pickle_module as mlflow_pytorch_pickle_module
+from mlflow.types import Schema, TensorSpec
+from torch import Tensor
 from torch.optim import Optimizer
 
 from lit_mlflow.logger import DbxMLFlowLogger
@@ -28,18 +32,31 @@ from lit_mlflow.utils.dbx import get_databricks_tags
 
 
 class MlFlowAutoCallback(Callback):
-    def __init__(self, verbose: bool = True, patch_device_monitor: bool = True) -> None:
+    def __init__(
+        self,
+        verbose: bool = True,
+        patch_device_monitor: bool = True,
+        serialization_format: Literal["pickle", "pt2"] = "pickle",
+        input_example_fn: Callable[[Any], Tensor | tuple[Tensor, ...] | list[Tensor]] | None = None,
+    ) -> None:
         """Initialize callback state and supported MLflow logger types.
 
         Args:
             verbose: Stored verbosity setting; it does not currently change behavior.
             patch_device_monitor: Whether to patch device statistics logging during setup.
+            serialization_format: MLflow model serialization format.
+            input_example_fn: Select the model's positional tensor inputs from a training batch for PT2 export.
         """
+        if serialization_format not in ("pickle", "pt2"):
+            raise ValueError("serialization_format must be 'pickle' or 'pt2'.")
         self.supported_loggers = (MLFlowLogger, DbxMLFlowLogger)
         self.verbose = verbose
         self.logger: MLFlowLogger | DbxMLFlowLogger | None = None
         self.autologging_disabled = False
         self.patch_device_monitor = patch_device_monitor
+        self.serialization_format = serialization_format
+        self.input_example_fn = input_example_fn
+        self._input_example: tuple[Tensor, ...] | None = None
 
     @property
     def client(self) -> MlflowClient | None:
@@ -197,6 +214,28 @@ class MlFlowAutoCallback(Callback):
                 run_id = str(self.logger.run_id)
                 self.client.log_artifacts(run_id, tmp_dir, artifact_path)
 
+    def _get_pt2_signature(self) -> ModelSignature | None:
+        """Build a tensor signature from the captured PT2 input example.
+
+        Returns:
+            The model input signature, or None if no input example was captured.
+        """
+        if self._input_example is None:
+            return None
+
+        return ModelSignature(
+            inputs=Schema(
+                [
+                    TensorSpec(
+                        sample.numpy().dtype,
+                        (-1, *sample.shape[1:]) if sample.ndim else (),
+                        name=f"input_{index}" if len(self._input_example) > 1 else None,
+                    )
+                    for index, sample in enumerate(self._input_example)
+                ]
+            )
+        )
+
     def _log_model(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
         """Serialize and upload the model, then record its MLflow metadata.
 
@@ -204,7 +243,7 @@ class MlFlowAutoCallback(Callback):
 
         Args:
             trainer: Trainer invoking the callback; unused.
-            pl_module: Model to serialize with pickle.
+            pl_module: Model to serialize.
         """
         if self.logger and self.logger.run_id and self.client:
             rank_zero_info("Saving the model and uploading to MLFlow!")
@@ -212,20 +251,59 @@ class MlFlowAutoCallback(Callback):
                 local_path = Path(tmp_dir) / "model"
                 artifact_path = "model"
                 mlflow_model = Model(artifact_path=artifact_path, run_id=self.logger.run_id)
-                mlflow.pytorch.save_model(
-                    pytorch_model=pl_module,
-                    path=local_path,
-                    conda_env=None,
-                    mlflow_model=mlflow_model,
-                    code_paths=None,
-                    pickle_module=mlflow_pytorch_pickle_module,
-                    serialization_format="pickle",
-                    signature=None,
-                    input_example=None,
-                    extra_files=None,
-                    pip_requirements=None,
-                    extra_pip_requirements=None,
-                )
+                serialization_format = self.serialization_format
+                if serialization_format == "pt2" and self._input_example is None:
+                    rank_zero_warn("PT2 export requires a captured tensor input; falling back to pickle.")
+                    serialization_format = "pickle"
+                training_modes = []
+                try:
+                    signature = self._get_pt2_signature() if serialization_format == "pt2" else None
+                    input_example = None
+                    if signature is not None and self._input_example is not None:
+                        if len(self._input_example) == 1 and pl_module.device.type == "cpu":
+                            input_example = self._input_example[0].numpy()
+                        else:
+                            input_example = tuple(sample.to(pl_module.device) for sample in self._input_example)
+                        training_modes = [(module, module.training) for module in pl_module.modules()]
+                        pl_module.eval()
+                    mlflow.pytorch.save_model(
+                        pytorch_model=pl_module,
+                        path=local_path,
+                        conda_env=None,
+                        mlflow_model=mlflow_model,
+                        code_paths=None,
+                        pickle_module=mlflow_pytorch_pickle_module,
+                        serialization_format=self.serialization_format,
+                        signature=signature,
+                        input_example=input_example,
+                        extra_files=None,
+                        pip_requirements=None,
+                        extra_pip_requirements=None,
+                    )
+                except Exception as exc:
+                    if serialization_format != "pt2":
+                        raise
+                    rank_zero_warn(f"PT2 model export failed; falling back to pickle. Reason: {exc}")
+                    shutil.rmtree(local_path, ignore_errors=True)
+                    serialization_format = "pickle"
+                    mlflow_model = Model(artifact_path=artifact_path, run_id=self.logger.run_id)
+                    mlflow.pytorch.save_model(
+                        pytorch_model=pl_module,
+                        path=local_path,
+                        conda_env=None,
+                        mlflow_model=mlflow_model,
+                        code_paths=None,
+                        pickle_module=mlflow_pytorch_pickle_module,
+                        serialization_format=serialization_format,
+                        signature=None,
+                        input_example=None,
+                        extra_files=None,
+                        pip_requirements=None,
+                        extra_pip_requirements=None,
+                    )
+                finally:
+                    for module, training in training_modes:
+                        module.training = training
                 self.client.log_artifacts(
                     run_id=self.logger.run_id,
                     local_dir=tmp_dir,
@@ -405,6 +483,7 @@ class MlFlowAutoCallback(Callback):
             trainer: Trainer invoking the hook.
             pl_module: Model being fitted.
         """
+        self._input_example = None
 
     def on_fit_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
         """Do nothing when fitting ends.
@@ -433,7 +512,7 @@ class MlFlowAutoCallback(Callback):
     def on_train_batch_start(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", batch: Any, batch_idx: int
     ) -> None:
-        """Do nothing when a training batch begins.
+        """Capture the first model input when PT2 serialization is enabled.
 
         Args:
             trainer: Trainer invoking the hook.
@@ -441,6 +520,15 @@ class MlFlowAutoCallback(Callback):
             batch: Current training batch.
             batch_idx: Index of the batch.
         """
+        if self.serialization_format == "pt2" and self._input_example is None and not self._prevent_entry(trainer):
+            if self.input_example_fn is not None:
+                sample = self.input_example_fn(batch)
+            else:
+                sample = batch[0] if isinstance(batch, (tuple, list)) and batch else batch
+            samples = (sample,) if isinstance(sample, Tensor) else sample
+            if not isinstance(samples, (tuple, list)) or not samples or not all(isinstance(x, Tensor) for x in samples):
+                raise ValueError("PT2 model saving requires tensor inputs; use input_example_fn to select them.")
+            self._input_example = tuple(sample.detach().cpu().clone() for sample in samples)
 
     def on_train_batch_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs: STEP_OUTPUT, batch: Any, batch_idx: int
@@ -690,7 +778,10 @@ class MlFlowAutoCallback(Callback):
 
         self._log_model_summary(trainer, pl_module)
 
-        self._log_model(trainer, pl_module)
+        try:
+            self._log_model(trainer, pl_module)
+        finally:
+            self._input_example = None
 
     @rank_zero_only
     def on_validation_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
@@ -761,6 +852,7 @@ class MlFlowAutoCallback(Callback):
             pl_module: Model passed by the callback hook; unused.
             exception: Exception that interrupted execution; unused.
         """
+        self._input_example = None
         if self._prevent_entry(trainer):
             return
         if self.logger and self.logger.run_id and self.client:
