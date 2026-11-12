@@ -20,8 +20,8 @@ dynamic = [
     "version"
 ]
 dependencies = [
-    "lightning>=2.6.5",
-    "mlflow>=3.14.0",
+    "lightning>=2.6.6",
+    "mlflow-skinny>=3.18.0",
 ]
 
 #[project.optional-dependencies]
@@ -42,6 +42,10 @@ default-groups = "all"
 # ]
 
 [dependency-groups]
+dbx = [
+    "databricks-cli>=0.18.0",
+    "mlflow>=3.18.0",
+]
 dev = [
     "ruff>=0.17.4",
     "ty>=0.0.101",
@@ -57,7 +61,7 @@ dev = [
 ]
 test = [
     "pytest==9.0.3",
-    "pytest-asyncio>=1.4.1",
+    "pytest-asyncio>=1.4.1.post1",
     "pytest-cov>=7.1.0",
     "pytest-mock>=3.17.0",
     "pytest-cases>=3.10.1",
@@ -66,13 +70,13 @@ test = [
 ]
 docs = [
     "mkdocs>=1.6.1",
-    "mkdocs-material>=9.8.0",
-    "mkdocs-git-revision-date-localized-plugin>=1.6.3",
+    "mkdocs-material>=9.8.1",
+    "mkdocs-git-revision-date-localized-plugin>=1.7.0",
     "mkdocs-awesome-nav>=3.3.0",
     "mkdocs-git-authors-plugin>=0.10.0",
     "mkapi>=4.5.0",
     "markdown-callouts>=0.4.0",
-    "pymdown-extensions>=12.3",
+    "pymdown-extensions>=13.1",
     "pygments>=2.21.0",
     "mkdocs-jupyter>=0.27.0",
 ]
