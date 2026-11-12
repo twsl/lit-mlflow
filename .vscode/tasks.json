@@ -1,0 +1,35 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Databricks: Deploy jobs",
+            "type": "shell",
+            "command": "databricks bundle deploy",
+            "problemMatcher": []
+        },
+        {
+            "label": "Databricks: Validate bundle",
+            "type": "shell",
+            "command": "databricks bundle validate",
+            "problemMatcher": []
+        },
+        {
+            "label": "Databricks: Run serverless example",
+            "type": "shell",
+            "dependsOn": [
+                "Databricks: Deploy jobs"
+            ],
+            "command": "databricks bundle run example",
+            "problemMatcher": []
+        },
+        {
+            "label": "Databricks: Run cluster example",
+            "type": "shell",
+            "dependsOn": [
+                "Databricks: Deploy jobs"
+            ],
+            "command": "databricks bundle run example_cluster",
+            "problemMatcher": []
+        }
+    ]
+}

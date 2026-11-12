@@ -10,6 +10,11 @@
             "VARIANT": "3.12-trixie"
         }
     },
+    "initializeCommand": "test -f .env || touch .env",
+    "runArgs": [
+        "--env-file",
+        ".env"
+    ],
     "remoteEnv": {
         "RTK_TELEMETRY_DISABLED": "1",
         "CODEGRAPH_TELEMETRY": "0",
@@ -37,7 +42,7 @@
     // Use 'forwardPorts' to make a list of ports inside the container available locally.
     // "forwardPorts": [],
     // Use 'postCreateCommand' to run commands after the container is created.
-    "postCreateCommand": "uv sync --all-groups --all-extras && sh ./scripts/llm.sh",
+    "postCreateCommand": "uv sync --all-groups --all-extras && sh ./scripts/llm.sh && sh ./scripts/dbx.sh",
     "postStartCommand": "uv tool install prek && prek install",
     // Configure tool-specific properties.
     "customizations": {
