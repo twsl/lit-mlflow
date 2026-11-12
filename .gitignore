@@ -170,3 +170,4 @@ cython_debug/
 # mlflow
 */mlruns/
 mlflow.db
+*.ckpt
