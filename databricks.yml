@@ -1,0 +1,59 @@
+bundle:
+  name: lit-mlflow
+
+artifacts:
+  lit_mlflow_wheel:
+    type: whl
+    path: .
+    build: uv build --wheel
+
+sync:
+  paths:
+    - notebooks
+
+variables:
+  cluster_node_type_id:
+    description: Cloud-specific VM type for the cluster job
+    default: Standard_D4ds_v5
+
+resources:
+  jobs:
+    example:
+      name: lit-mlflow-example
+      tasks:
+        - task_key: run_example
+          notebook_task:
+            notebook_path: ./notebooks/example.ipynb
+          environment_key: default
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "5"
+            dependencies:
+              - lit-mlflow
+              - "databricks-cli>=0.18.0"
+              - "mlflow>=3.18.0"
+    example_cluster:
+      name: lit-mlflow-example-cluster
+      tasks:
+        - task_key: run_example
+          job_cluster_key: example_cluster
+          notebook_task:
+            notebook_path: ./notebooks/example.ipynb
+          libraries:
+            - whl: ${artifacts.lit_mlflow_wheel.path}
+            - pypi:
+                package: "databricks-cli>=0.18.0"
+            - pypi:
+                package: "mlflow>=3.18.0"
+      job_clusters:
+        - job_cluster_key: example_cluster
+          new_cluster:
+            spark_version: "18.x-scala2.13"
+            node_type_id: ${var.cluster_node_type_id}
+            num_workers: 1
+
+targets:
+  dev:
+    mode: development
+    default: true
