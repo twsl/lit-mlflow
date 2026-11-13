@@ -5,30 +5,77 @@
             "label": "Databricks: Deploy jobs",
             "type": "shell",
             "command": "databricks bundle deploy",
+            // "options": {
+            //     "env": {
+            //         "BUNDLE_VAR_cluster_policy_id": "${env:DATABRICKS_CLUSTER_POLICY_ID}"
+            //     }
+            // },
             "problemMatcher": []
         },
         {
             "label": "Databricks: Validate bundle",
             "type": "shell",
             "command": "databricks bundle validate",
+            "options": {
+                "env": {}
+            },
             "problemMatcher": []
         },
         {
-            "label": "Databricks: Run serverless example",
+            "label": "Databricks: Run serverless Notebook example",
             "type": "shell",
             "dependsOn": [
                 "Databricks: Deploy jobs"
             ],
             "command": "databricks bundle run example",
+            "options": {
+                "env": {}
+            },
             "problemMatcher": []
         },
         {
-            "label": "Databricks: Run cluster example",
+            "label": "Databricks: Run serverless Python example",
+            "type": "shell",
+            "dependsOn": [
+                "Databricks: Deploy jobs"
+            ],
+            "command": "databricks bundle run example_python",
+            "options": {
+                "env": {}
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Databricks: Run cluster Notebook example",
             "type": "shell",
             "dependsOn": [
                 "Databricks: Deploy jobs"
             ],
             "command": "databricks bundle run example_cluster",
+            "options": {
+                "env": {}
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Databricks: Run cluster Python example",
+            "type": "shell",
+            "dependsOn": [
+                "Databricks: Deploy jobs"
+            ],
+            "command": "databricks bundle run example_python_cluster",
+            "options": {
+                "env": {}
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Databricks: Destroy bundle",
+            "type": "shell",
+            "command": "databricks bundle destroy",
+            "options": {
+                "env": {}
+            },
             "problemMatcher": []
         }
     ]
