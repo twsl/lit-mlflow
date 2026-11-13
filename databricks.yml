@@ -5,53 +5,113 @@ artifacts:
   lit_mlflow_wheel:
     type: whl
     path: .
-    build: uv build --wheel
+    build: uv build
 
 sync:
   paths:
     - notebooks
 
 variables:
-  cluster_node_type_id:
-    description: Cloud-specific VM type for the cluster job
-    default: Standard_D4ds_v5
+  cluster_policy_id:
+    description: Cluster policy ID supplied through BUNDLE_VAR_cluster_policy_id
+  service_principal_client_id:
+    description: "Service principal client ID supplied through BUNDLE_VAR_service_principal_client_id"
+  experiment_name:
+    description: Absolute Databricks workspace path for the MLflow experiment
+    default: "/Shared/lit-mlflow"
+  job_cluster:
+    description: Job cluster configuration
+    type: complex
+    default: &job_cluster_defaults
+      data_security_mode: DATA_SECURITY_MODE_STANDARD
+      policy_id: ${var.cluster_policy_id}
+      kind: CLASSIC_PREVIEW
+      azure_attributes:
+        availability: SPOT_WITH_FALLBACK_AZURE
+      runtime_engine: STANDARD
+      spark_version: "18.x-scala2.13"
+      node_type_id: Standard_D4ds_v5
+      driver_node_type_id: Standard_D4ds_v5
+      is_single_node: false
+      num_workers: 1
+  two_worker_job_cluster:
+    description: Job cluster configuration for environment diagnostics
+    type: complex
+    default:
+      <<: *job_cluster_defaults
+      num_workers: 2
 
 resources:
   jobs:
     example:
       name: lit-mlflow-example
+      run_as:
+        service_principal_name: ${var.service_principal_client_id}
       tasks:
         - task_key: run_example
           notebook_task:
             notebook_path: ./notebooks/example.ipynb
+            base_parameters:
+              experiment_name: ${var.experiment_name}
           environment_key: default
       environments:
         - environment_key: default
           spec:
             environment_version: "5"
-            dependencies:
-              - lit-mlflow
+            dependencies: &serverless_dependencies
+              - ./dist/*.whl
               - "databricks-cli>=0.18.0"
               - "mlflow>=3.18.0"
+
+    example_python:
+      name: lit-mlflow-example-python
+      run_as:
+        service_principal_name: ${var.service_principal_client_id}
+      tasks:
+        - task_key: run_example
+          spark_python_task:
+            python_file: ./notebooks/example.py
+            parameters: ["--experiment-name", "${var.experiment_name}"]
+          environment_key: default
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "5"
+            dependencies: *serverless_dependencies
+
     example_cluster:
       name: lit-mlflow-example-cluster
+      run_as:
+        service_principal_name: ${var.service_principal_client_id}
       tasks:
         - task_key: run_example
           job_cluster_key: example_cluster
           notebook_task:
             notebook_path: ./notebooks/example.ipynb
-          libraries:
-            - whl: ${artifacts.lit_mlflow_wheel.path}
+            base_parameters:
+              experiment_name: ${var.experiment_name}
+          libraries: &cluster_libraries
+            - whl: ./dist/*.whl
             - pypi:
                 package: "databricks-cli>=0.18.0"
             - pypi:
                 package: "mlflow>=3.18.0"
-      job_clusters:
+      job_clusters: &example_job_clusters
         - job_cluster_key: example_cluster
-          new_cluster:
-            spark_version: "18.x-scala2.13"
-            node_type_id: ${var.cluster_node_type_id}
-            num_workers: 1
+          new_cluster: ${var.job_cluster}
+
+    example_python_cluster:
+      run_as:
+        service_principal_name: ${var.service_principal_client_id}
+      name: lit-mlflow-example-python-cluster
+      tasks:
+        - task_key: run_example
+          job_cluster_key: example_cluster
+          spark_python_task:
+            python_file: ./notebooks/example.py
+            parameters: ["--experiment-name", "${var.experiment_name}"]
+          libraries: *cluster_libraries
+      job_clusters: *example_job_clusters
 
 targets:
   dev:
