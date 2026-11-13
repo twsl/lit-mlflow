@@ -41,6 +41,9 @@ class DbxMLFlowLogger(MLFlowLogger):
             artifact_location: Location for the experiment's artifacts.
             run_id: ID of an existing run to reuse.
         """
+        if is_in_databricks() and not patch_dbx_credentials():
+            rank_zero_warn("Could not patch Databricks credentials before creating the MLflow client.")
+
         super().__init__(
             experiment_name, run_name, tracking_uri, tags, save_dir, log_model, prefix, artifact_location, run_id
         )
@@ -48,14 +51,11 @@ class DbxMLFlowLogger(MLFlowLogger):
             rank_zero_warn(f"You are running `{self.__class__.__name__}` outside of Databricks.")
         else:
             self._fix_logging()
-            if patch_dbx_credentials():
-                client = self.experiment
-                if client:
-                    rank_zero_info("MLflow client created.")
-                else:
-                    rank_zero_warn("Could not retrieve the MLflow client.")
+            client = self.experiment
+            if client:
+                rank_zero_info("MLflow client created.")
             else:
-                rank_zero_warn("Could not patch Databricks credentials.")
+                rank_zero_warn("Could not retrieve the MLflow client.")
 
     def _get_url(self) -> str | None:
         """Build the Databricks URL for this logger's run.

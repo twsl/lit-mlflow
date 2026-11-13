@@ -22,6 +22,7 @@ dynamic = [
 dependencies = [
     "lightning>=2.6.6",
     "mlflow-skinny>=3.18.0",
+    "databricks-sdk>=0.166.0",
 ]
 
 #[project.optional-dependencies]

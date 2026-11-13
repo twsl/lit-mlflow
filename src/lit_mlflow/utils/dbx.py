@@ -3,10 +3,31 @@ import os
 
 from mlflow.utils.databricks_utils import (
     _get_property_from_spark_context,
+    get_cluster_id,
+    get_databricks_runtime_version,
+    get_job_group_id,
+    get_job_id,
+    get_job_run_id,
+    get_job_type,
+    get_job_type_info,
     get_notebook_id,
+    get_notebook_path,
+    get_repl_id,
+    get_workload_class,
+    get_workload_id,
+    is_databricks_connect,
+    is_databricks_serverless,
+    is_dbfs_fuse_available,
     is_in_databricks_job,
     is_in_databricks_model_serving_environment,
     is_in_databricks_notebook,
+    is_in_databricks_repo,
+    is_in_databricks_repo_notebook,
+    is_in_databricks_runtime,
+    is_in_databricks_serverless_runtime,
+    is_in_databricks_shared_cluster_runtime,
+    is_running_in_ipython_environment,
+    is_uc_volume_fuse_available,
 )
 
 
@@ -20,7 +41,7 @@ def is_in_databricks() -> bool:
 
 
 def patch_dbx_credentials() -> bool:
-    """Copy nonempty Databricks notebook configuration values to environment variables.
+    """Expose Databricks runtime credentials through MLflow environment variables for workers.
 
     Each variable is named by uppercasing the configuration attribute and adding
     the ``DATABRICKS_`` prefix, making the values available to DDP processes.
@@ -31,17 +52,24 @@ def patch_dbx_credentials() -> bool:
     Returns:
         True when a notebook configuration is available, otherwise False.
     """
-    if is_in_databricks_notebook():
-        # no direct dependency needed, available when in databricks environment
-        from mlflow.legacy_databricks_cli.configure.provider import DatabricksConfig, get_config
+    if not is_in_databricks():
+        return False
 
-        config: DatabricksConfig = get_config()
-        if config:
-            for k, v in config.__dict__.items():
-                if v:
-                    os.environ[f"DATABRICKS_{k.upper()}"] = str(v)
-            return True
-    return False
+    from databricks.sdk.config import Config
+
+    config = Config()
+    if config.host:
+        os.environ["DATABRICKS_HOST"] = config.host
+
+    authorization = config.authenticate().get("Authorization", "")
+    has_bearer_token = authorization.lower().startswith("bearer ")
+    if has_bearer_token:
+        os.environ["DATABRICKS_TOKEN"] = authorization.split(" ", 1)[1]
+
+    if config.skip_verify is not None:
+        os.environ["DATABRICKS_INSECURE"] = str(config.skip_verify).lower()
+
+    return bool(config.host and has_bearer_token)
 
 
 def get_experiment_id(default_name: str | None = None) -> str | None:

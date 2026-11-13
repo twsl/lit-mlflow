@@ -1910,6 +1910,7 @@ name = "lit-mlflow"
 source = { editable = "." }
 default-groups = "all"
 dependencies = [
+    { name = "databricks-sdk" },
     { name = "lightning" },
     { name = "mlflow-skinny" },
 ]
@@ -1959,6 +1960,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
+    { name = "databricks-sdk", specifier = ">=0.166.0" },
     { name = "lightning", specifier = ">=2.6.6" },
     { name = "mlflow-skinny", specifier = ">=3.18.0" },
 ]
