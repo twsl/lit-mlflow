@@ -59,8 +59,8 @@ tensor). For other batch layouts or multiple positional inputs, select the input
 
 ```python
 callback = MlFlowAutoCallback(
-	serialization_format="pt2",
-	input_example_fn=lambda batch: (batch["features"], batch["mask"]),
+    serialization_format="pt2",
+    input_example_fn=lambda batch: (batch["features"], batch["mask"]),
 )
 ```
 
